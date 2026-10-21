@@ -18,8 +18,13 @@ function init() {
     const s = JSON.parse(fs.readFileSync(SEED, 'utf8'));
     DB = { v: 1, next: 1, contacts: [], users: [], hc: [], ord: s.ord, fav: {}, sessions: {} };
     s.contacts.forEach(c => DB.contacts.push({ i: DB.next++, n: c.n, t: c.t || '', p: c.p || '', w: c.w || '', c: c.c, h: c.h ? 1 : 0 }));
-    DB.users.push(process.env.ADMIN_PASS && process.env.ADMIN_CODE ? mkUser(process.env.ADMIN_USER || 'admin', 'المدير', process.env.ADMIN_PASS, process.env.ADMIN_CODE, 'admin') : s.admin);
+    DB.users.push(process.env.ADMIN_PASS && process.env.ADMIN_CODE ? mkUser((process.env.ADMIN_USER || 'admin').trim(), 'المدير', process.env.ADMIN_PASS.trim(), process.env.ADMIN_CODE.trim(), 'admin') : s.admin);
     save(true);
+  }
+  const EU = (process.env.ADMIN_USER || 'admin').trim(), EP = (process.env.ADMIN_PASS || '').trim(), EK = (process.env.ADMIN_CODE || '').trim();
+  if (process.env.RESET_ADMIN && EP && EK) {
+    DB.users = DB.users.filter(x => x.role !== 'admin' && x.u !== EU.toLowerCase());
+    DB.users.unshift(mkUser(EU, 'المدير', EP, EK, 'admin')); DB.sessions = {}; save(true); console.log('admin reset');
   }
   if (process.env.CLEAR_SESSIONS) { DB.sessions = {}; save(true); }
   LOGMIN = DB.v;
@@ -79,6 +84,99 @@ function fullData(a) {
 const usersList = () => DB.users.filter(x => x.role !== 'admin').map(x => { const s = sessOf(x.u); return { u: x.u, name: x.name, hc: x.hc || [], bound: !!s, since: s ? s[1].t : 0 }; });
 const validPw = (p, k) => typeof p === 'string' && typeof k === 'string' && p.length >= 8 && k.length >= 4;
 const validU = u => /^[a-z0-9._-]{3,32}$/.test(u);
+// ---- واتساب: إرسال عبر API + قوالب + حملات تعمل في الخلفية (تُحفظ في wa.json) ----
+const WAF = path.join(DATA, 'wa.json');
+const WTT = ['الفريق','اللواء','العميد','العقيد','المقدم','الرائد','الركن','دكتور','الدكتور','الاستاذ','استاذ','الشيخ','السيد','المهندس','النائب','الحاج','د'];
+let W, wT = null, pumping = false; const MID = new Map();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function wsave(now) {
+  const w = () => { try { fs.mkdirSync(DATA, { recursive: true }); const tmp = WAF + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(W)); fs.renameSync(tmp, WAF); } catch (e) { console.error('wa save failed', e.message); } };
+  clearTimeout(wT); if (now) w(); else wT = setTimeout(w, 1500);
+}
+function wload() {
+  try { W = JSON.parse(fs.readFileSync(WAF, 'utf8')); } catch (e) { W = {}; }
+  W.cfg = Object.assign({ provider: 'ultramsg', url: '', instance: '', phone_id: '', token: '', hdr: '', body: '', delay: 20, jit: 30 }, W.cfg || {});
+  W.secret = W.secret || crypto.randomBytes(12).toString('hex'); W.tpls = W.tpls || []; W.camps = W.camps || []; W.next = W.next || 1;
+  for (const cp of W.camps) for (const r of cp.r) if (r.m) MID.set(r.m, r);
+  wsave(true);
+}
+const pubCfg = () => { const { token, ...c } = W.cfg; return { ...c, hasToken: !!token }; };
+const waReady = c => c.provider === 'ultramsg' ? !!(c.instance && c.token) : c.provider === 'meta' ? !!(c.phone_id && c.token) : !!c.url;
+const TL = new Set(['فريق','لواء','عميد','عقيد','مقدم','رائد','نقيب','ملازم','قائد','ركن','مفوض','دكتور','د','م','استاذ','شيخ','سيد','نائب','وزير','محافظ','سفير','حاج','مهندس','معالي','سعادة','قاضي','سماحه','فق','ف','ل']);
+const nw = w => w.replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/^ال(?=.{2})/, '');
+const firstName = n => { const ws = String(n || '').replace(/[()]/g, ' ').split(/\s+/).filter(Boolean); return ws.find(w => !TL.has(nw(w)) && !/^[0-9٠-٩]+$/.test(w)) || ws[0] || ''; };
+const wvars = r => {
+  const f = firstName(r.n), p = parentOf(r.c || '');
+  return { 'الاسم': r.n, name: r.n, 'الاسم_الأول': f, 'الاسم_الاول': f, first: f, 'المنصب': r.t || '', title: r.t || '', 'القسم': p, category: p, 'الرقم': r.p || '', phone: r.p || '' };
+};
+const wrender = (m, r) => { const v = wvars(r); return String(m).replace(/\{([^{}\s]+)\}/g, (x, k) => k in v ? v[k] : x); };
+const et = v => typeof v === 'string' ? v : (v && v.message) || JSON.stringify(v || '');
+async function waSend(to, text) {
+  const c = W.cfg;
+  try {
+    const sig = AbortSignal.timeout(25000);
+    if (c.provider === 'ultramsg') {
+      if (!c.instance || !c.token) return { ok: false, e: 'إعدادات الربط غير مكتملة', fatal: true };
+      const base = (c.url || 'https://api.ultramsg.com').replace(/\/+$/, '');
+      const r = await fetch(`${base}/${encodeURIComponent(c.instance)}/messages/chat`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ token: c.token, to: '+' + to, body: text }), signal: sig });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && (j.sent === true || j.sent === 'true')) return { ok: true, id: String(j.id || '') };
+      return { ok: false, e: str(et(j.error || j.message) || 'HTTP ' + r.status, 200), fatal: r.status === 401 || r.status === 403 };
+    }
+    if (c.provider === 'meta') {
+      if (!c.phone_id || !c.token) return { ok: false, e: 'إعدادات الربط غير مكتملة', fatal: true };
+      const r = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(c.phone_id)}/messages`, { method: 'POST', headers: { Authorization: 'Bearer ' + c.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: text, preview_url: false } }), signal: sig });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.messages && j.messages[0]) return { ok: true, id: String(j.messages[0].id) };
+      return { ok: false, e: str(et(j.error && j.error.message) || 'HTTP ' + r.status, 200), fatal: r.status === 401 || !!(j.error && j.error.code === 190) };
+    }
+    if (!c.url) return { ok: false, e: 'رابط الـ API غير محدد', fatal: true };
+    const sub = (s, mode) => String(s).replace(/\{\{(phone|message|token)\}\}/g, (m, k) => { const v = k === 'phone' ? to : k === 'token' ? c.token : text; return mode === 'json' ? JSON.stringify(v).slice(1, -1) : mode === 'url' ? encodeURIComponent(v) : v; });
+    const h = {}; let hasCT = false;
+    for (const ln of String(c.hdr || '').split('\n')) { const i = ln.indexOf(':'); if (i > 0) { const k = ln.slice(0, i).trim(); h[k] = sub(ln.slice(i + 1).trim(), 'raw'); if (/^content-type$/i.test(k)) hasCT = true; } }
+    if (!hasCT) h['Content-Type'] = 'application/json';
+    const r = await fetch(sub(c.url, 'url'), { method: 'POST', headers: h, body: sub(c.body || '{"to":"{{phone}}","message":"{{message}}"}', 'json'), signal: sig });
+    const t = await r.text(); let j = {}; try { j = JSON.parse(t); } catch (e) {}
+    if (r.ok && !(j && (j.success === false || j.status === 'error' || j.error))) return { ok: true, id: String(j.id || j.message_id || (j.messages && j.messages[0] && j.messages[0].id) || '') };
+    return { ok: false, e: str(et(j.error || j.message) || t || 'HTTP ' + r.status, 200), fatal: r.status === 401 || r.status === 403 };
+  } catch (e) { return { ok: false, e: e.name === 'TimeoutError' ? 'انتهت مهلة الاتصال' : 'تعذّر الاتصال: ' + str(e.message, 120) }; }
+}
+// ---- العامل الخلفي: يعالج الحملة الجارية رسالة تلو رسالة حتى تنتهي (يستمر حتى بعد إغلاق المتصفح، ويُستأنف بعد إعادة تشغيل الخادم)
+async function pump() {
+  if (pumping) return; pumping = true; let fails = 0;
+  try {
+    for (;;) {
+      const cp = W.camps.find(x => x.st === 'running'); if (!cp) break;
+      const r = cp.r.find(x => x.s === 'q');
+      if (!r) { cp.st = 'done'; cp.end = Date.now(); wsave(true); continue; }
+      const res = await waSend(r.w, wrender(cp.msg, r));
+      if (res.ok) { r.s = 's'; r.m = res.id; r.a = Date.now(); r.e = ''; fails = 0; if (res.id) MID.set(res.id, r); }
+      else if (res.fatal) { if (cp.st === 'running') { cp.st = 'paused'; cp.why = 'توقفت الحملة: ' + res.e + ' — صحّح إعدادات الربط ثم اضغط استئناف.'; } }
+      else { r.s = 'f'; r.e = res.e; r.a = Date.now(); if (++fails >= 5 && cp.st === 'running') { cp.st = 'paused'; cp.why = 'توقفت تلقائيًا بعد 5 إخفاقات متتالية (آخر خطأ: ' + res.e + ')'; fails = 0; } }
+      wsave();
+      if (cp.st === 'running' && cp.r.some(x => x.s === 'q')) { const ms = cp.d * 1000 * (1 + (Math.random() * 2 - 1) * cp.j / 100); for (let t = 0; t < ms && cp.st === 'running'; t += 500) await sleep(Math.min(500, ms - t)); }
+    }
+  } catch (e) { console.error('pump', e); } finally { pumping = false; }
+}
+// ---- إشعارات التسليم (Webhook) لتمييز «وصلت» و«قُرئت»
+const RANK = { q: 0, f: 0, s: 1, d: 2, r: 3 };
+function ack(id, to, st) {
+  let r = id && MID.get(String(id));
+  if (!r && to) { const p = String(to).replace(/\D/g, ''); for (let k = W.camps.length - 1; k >= 0 && !r; k--) { const rs = W.camps[k].r; for (let i = rs.length - 1; i >= 0; i--) if (rs[i].w === p && RANK[rs[i].s] >= 1) { r = rs[i]; break; } } }
+  if (!r) return; st = String(st).toLowerCase();
+  const n = st === 'read' || st === 'played' ? 'r' : st === 'delivered' || st === 'device' ? 'd' : st === 'failed' ? 'f' : st === 'sent' || st === 'server' ? 's' : null; if (!n) return;
+  if (n === 'f') { if (RANK[r.s] < 2) { r.s = 'f'; r.e = r.e || 'فشل التسليم'; } } else if (RANK[n] > RANK[r.s]) r.s = n;
+  wsave();
+}
+function whook(b) {
+  try {
+    for (const en of b.entry || []) for (const ch of en.changes || []) for (const s of (ch.value && ch.value.statuses) || []) ack(s.id, s.recipient_id, s.status);
+    if (b.data && b.data.ack) ack(b.data.id, b.data.to, b.data.ack);
+  } catch (e) {}
+}
+const wsum = cp => { const o = { id: cp.id, name: cp.name, st: cp.st, why: cp.why || '', cr: cp.cr, end: cp.end || 0, total: cp.r.length, q: 0, s: 0, d: 0, r: 0, f: 0 }; for (const x of cp.r) o[x.s]++; return o; };
+const clampN = (v, a, b, def) => Math.min(b, Math.max(a, +v || def));
+wload(); pump();
 // ---- server
 http.createServer(async (req, res) => {
   const P = new URL(req.url, 'http://x').pathname, M = req.method;
@@ -86,6 +184,11 @@ http.createServer(async (req, res) => {
   if (M === 'GET' && (P === '/' || P === '/index.html')) { try { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', ...sec }); return res.end(fs.readFileSync(HTMLF)); } catch (e) { res.writeHead(500); return res.end('index.html missing'); } }
   if (P === '/healthz') { res.writeHead(200); return res.end('ok'); }
   if (!P.startsWith('/api/')) { res.writeHead(404); return res.end('Not found'); }
+  if (P.startsWith('/api/wa-hook/')) {
+    if (P.split('/')[3] !== W.secret) { res.writeHead(404); return res.end(); }
+    if (M === 'GET') { const sp = new URL(req.url, 'http://x').searchParams, ch = sp.get('hub.challenge'); if (ch && sp.get('hub.verify_token') !== W.secret) { res.writeHead(403); return res.end(); } res.writeHead(200); return res.end(ch || 'ok'); }
+    const hb = await readBody(req, 500000); if (hb) whook(hb); res.writeHead(200); return res.end('ok');
+  }
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress).split(',')[0].trim();
   if (limited(ip)) return send(req, res, 429, { err: 'rate' });
   const url = new URL(req.url, 'http://x'), parts = P.split('/').filter(Boolean).slice(1), A = parts[0];
@@ -95,7 +198,8 @@ http.createServer(async (req, res) => {
       const u = str(q.u, 64).toLowerCase(), w = Math.max(lockWait('ip:' + ip), lockWait('u:' + u));
       if (w) return send(req, res, 429, { err: 'locked', wait: w });
       const usr = DB.users.find(x => x.u === u), salt = usr ? usr.salt : '00'.repeat(16);
-      const h = hashPw(q.p || '', q.k || '', salt), ok = usr && h.length === usr.h.length && crypto.timingSafeEqual(Buffer.from(h), Buffer.from(usr.h));
+      const chk = (p, k) => { const h = hashPw(p, k, salt); return !!usr && h.length === usr.h.length && crypto.timingSafeEqual(Buffer.from(h), Buffer.from(usr.h)); };
+      const rp = String(q.p || ''), rk = String(q.k || ''); let ok = chk(rp, rk); if (!ok && (rp !== rp.trim() || rk !== rk.trim())) ok = chk(rp.trim(), rk.trim());
       if (!ok) { addFail('ip:' + ip); addFail('u:' + u); return send(req, res, 401, { err: 'bad' }); }
       fails.delete('ip:' + ip); fails.delete('u:' + u);
       const dev = str(q.dev, 64), ex = sessOf(u);
@@ -137,10 +241,18 @@ http.createServer(async (req, res) => {
     }
     if (A === 'import' && M === 'POST') {
       const q = await readBody(req, 8e6); if (!q || !Array.isArray(q.contacts)) return send(req, res, 400, {});
-      const key = c => c.w ? c.w + '|' + c.c : c.n + '|' + c.p + '|' + c.c, have = new Set(DB.contacts.map(key));
-      let add = 0, dup = 0, bad = 0;
-      for (const x of q.contacts.slice(0, 30000)) { const c = clean(x); if (typeof c === 'string') { bad++; continue; } if (have.has(key(c))) { dup++; continue; } have.add(key(c)); DB.contacts.push({ i: DB.next++, ...c }); add++; }
-      if (add) bump(); return send(req, res, 200, { ok: true, added: add, dup, bad, v: DB.v });
+      const pk = c => { let d = String(c.w || c.p || '').replace(/\D/g, ''); if (d.startsWith('00')) d = d.slice(2); if (d.startsWith('964')) d = d.slice(3); return d.replace(/^0+/, ''); };
+      const have = new Map(), fresh = new Set();
+      for (const c of DB.contacts) { const k = pk(c); if (k && !have.has(k)) have.set(k, c); }
+      let add = 0, dup = 0, bad = 0, nop = 0; const dups = [];
+      for (const x of q.contacts.slice(0, 30000)) {
+        const c = clean(x); if (typeof c === 'string') { bad++; continue; }
+        const k = pk(c); if (!k) { nop++; continue; }
+        const ex = have.get(k);
+        if (ex) { dup++; if (dups.length < 300) dups.push({ n: c.n, p: c.p, ex: ex.n, exc: ex.c, inf: fresh.has(ex) ? 1 : 0 }); continue; }
+        const o = { i: DB.next++, ...c }; DB.contacts.push(o); have.set(k, o); fresh.add(o); add++;
+      }
+      if (add) bump(); return send(req, res, 200, { ok: true, added: add, dup, bad, nophone: nop, dups, v: DB.v });
     }
     if (A === 'users' && M === 'GET') return send(req, res, 200, { users: usersList(), max: MAXU });
     if (A === 'user') {
@@ -164,6 +276,60 @@ http.createServer(async (req, res) => {
       const q = await readBody(req, 1000), u = q && str(q.u, 32).toLowerCase(); if (!q || !validU(u) || !validPw(q.p, q.k)) return send(req, res, 400, { err: 'weak' });
       if (u !== a.u.u && DB.users.some(x => x.u === u)) return send(req, res, 409, { err: 'exists' });
       for (const s of Object.values(DB.sessions)) if (s.u === a.u.u) s.u = u; delete DB.fav[a.u.u]; a.u.u = u; a.u.salt = crypto.randomBytes(16).toString('hex'); a.u.h = hashPw(q.p, q.k, a.u.salt); save(); return send(req, res, 200, { ok: true });
+    }
+    if (A === 'wa') {
+      const sub = parts[1];
+      if (!sub && M === 'GET') return send(req, res, 200, { cfg: pubCfg(), tpls: W.tpls, camps: W.camps.slice().reverse().map(wsum), secret: W.secret });
+      if (sub === 'run' && M === 'GET') { const cp = W.camps.find(x => x.st === 'running'); return send(req, res, 200, { run: cp ? wsum(cp) : null }); }
+      if (sub === 'cfg' && M === 'PUT') {
+        const q = await readBody(req, 10000); if (!q) return send(req, res, 400, {}); const c = W.cfg;
+        if (['ultramsg', 'meta', 'custom'].includes(q.provider)) c.provider = q.provider;
+        for (const k of ['url', 'instance', 'phone_id', 'hdr', 'body']) if (q[k] !== undefined) c[k] = str(q[k], k === 'hdr' || k === 'body' ? 2000 : 300);
+        if (c.url && !/^https?:\/\//i.test(c.url)) return send(req, res, 400, { err: 'url' });
+        if (q.token) c.token = str(q.token, 800); if (q.clearToken) c.token = '';
+        if (q.delay !== undefined) c.delay = clampN(q.delay, 5, 3600, 20); if (q.jit !== undefined) c.jit = clampN(q.jit, 0, 80, 0);
+        wsave(true); return send(req, res, 200, { ok: true, cfg: pubCfg() });
+      }
+      if (sub === 'test' && M === 'POST') {
+        const q = await readBody(req, 6000), f = q && fmt(q.to); if (!f || !f.w) return send(req, res, 400, { err: 'phone' });
+        if (!waReady(W.cfg)) return send(req, res, 400, { err: 'nocfg' });
+        const r = await waSend(f.w.replace(/\D/g, ''), str(q.msg, 4000) || 'رسالة تجريبية من دليل الأرقام ✅'); return send(req, res, 200, { ok: r.ok, e: r.e || '' });
+      }
+    }
+    if (A === 'tpl') {
+      if (M === 'POST') { const q = await readBody(req, 10000), n = str(q && q.name, 80), b = str(q && q.body, 4096); if (!n || !b) return send(req, res, 400, { err: 'fields' }); if (W.tpls.length >= 200) return send(req, res, 409, { err: 'max' }); const o = { id: W.next++, name: n, body: b }; W.tpls.push(o); wsave(true); return send(req, res, 200, { ok: true, id: o.id }); }
+      const k = W.tpls.findIndex(x => x.id === +parts[1]); if (k < 0) return send(req, res, 404, {});
+      if (M === 'PUT') { const q = await readBody(req, 10000), n = str(q && q.name, 80), b = str(q && q.body, 4096); if (!n || !b) return send(req, res, 400, { err: 'fields' }); W.tpls[k] = { id: W.tpls[k].id, name: n, body: b }; wsave(true); return send(req, res, 200, { ok: true }); }
+      if (M === 'DELETE') { W.tpls.splice(k, 1); wsave(true); return send(req, res, 200, { ok: true }); }
+    }
+    if (A === 'camp') {
+      const busy = () => W.camps.some(x => x.st === 'running');
+      if (M === 'POST' && !parts[1]) {
+        const q = await readBody(req, 400000); if (!q) return send(req, res, 400, {}); const msg = str(q.msg, 4096);
+        if (!msg) return send(req, res, 400, { err: 'msg' }); if (!waReady(W.cfg)) return send(req, res, 400, { err: 'nocfg' }); if (busy()) return send(req, res, 409, { err: 'busy' });
+        const want = new Set((Array.isArray(q.ids) ? q.ids : []).slice(0, 5000).map(Number)), seen = new Set(), rs = [];
+        for (const c of DB.contacts) { if (!want.has(c.i)) continue; const w = String(c.w || '').replace(/\D/g, ''); if (w.length < 8 || seen.has(w)) continue; seen.add(w); rs.push({ n: c.n, t: c.t, c: c.c, p: c.p, w, s: 'q' }); }
+        if (!rs.length) return send(req, res, 400, { err: 'norcpt' });
+        const cp = { id: W.next++, name: str(q.name, 80) || 'حملة ' + new Date().toISOString().slice(0, 10), msg, d: clampN(q.d, 5, 3600, W.cfg.delay), j: clampN(q.j, 0, 80, W.cfg.jit), st: 'running', cr: Date.now(), end: 0, why: '', r: rs };
+        W.camps.push(cp); wsave(true); pump(); return send(req, res, 200, { ok: true, id: cp.id });
+      }
+      const cp = W.camps.find(x => x.id === +parts[1]); if (!cp) return send(req, res, 404, {});
+      if (M === 'GET') return send(req, res, 200, { ...wsum(cp), msg: cp.msg, dly: cp.d, rs: cp.r.map(x => ({ n: x.n, w: x.w, s: x.s, e: x.e || '', a: x.a || 0 })) });
+      if (M === 'DELETE') { if (cp.st === 'running') return send(req, res, 409, { err: 'busy' }); W.camps = W.camps.filter(x => x !== cp); for (const x of cp.r) if (x.m) MID.delete(x.m); wsave(true); return send(req, res, 200, { ok: true }); }
+      if (M === 'POST') {
+        const a2 = parts[2];
+        if (a2 === 'pause' && cp.st === 'running') { cp.st = 'paused'; cp.why = ''; }
+        else if (a2 === 'stop' && (cp.st === 'running' || cp.st === 'paused')) { cp.st = 'stopped'; cp.why = ''; cp.end = Date.now(); }
+        else if (a2 === 'resume' && (cp.st === 'paused' || cp.st === 'stopped')) {
+          if (busy()) return send(req, res, 409, { err: 'busy' }); if (!waReady(W.cfg)) return send(req, res, 400, { err: 'nocfg' });
+          if (!cp.r.some(x => x.s === 'q')) return send(req, res, 400, { err: 'none' }); cp.st = 'running'; cp.why = ''; cp.end = 0; pump();
+        } else if (a2 === 'retry') {
+          if (cp.st === 'running') return send(req, res, 409, { err: 'busy' }); if (busy()) return send(req, res, 409, { err: 'busy' }); if (!waReady(W.cfg)) return send(req, res, 400, { err: 'nocfg' });
+          let n = 0; for (const x of cp.r) if (x.s === 'f') { x.s = 'q'; x.e = ''; n++; } if (!n) return send(req, res, 400, { err: 'none' });
+          cp.st = 'running'; cp.why = ''; cp.end = 0; pump();
+        } else return send(req, res, 400, { err: 'state' });
+        wsave(true); return send(req, res, 200, { ok: true });
+      }
     }
     if (A === 'backup' && M === 'GET') { const { sessions, ...rest } = DB; return send(req, res, 200, rest, { 'Content-Disposition': 'attachment; filename="phonebook-backup.json"' }); }
     if (A === 'restore' && M === 'POST') {
