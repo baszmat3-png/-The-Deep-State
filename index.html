@@ -203,7 +203,7 @@ function form(c){const e=!!c;c=c||{n:'',t:'',p:'',c:'',h:0};
 const seg=(k,o)=>`<div class="seg">${o.map(([v,l])=>`<button data-k="${k}" data-v="${v}" class="${S[k]==v?'on':''}">${l}</button>`).join('')}</div>`;
 function dl(text,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.append(a);a.click();a.remove()}
 function settings(){openSh(`<h3>الإعدادات${X}</h3>
-${ADMIN?`<button class="pr" id="ac" style="margin-top:0">👥 المستخدمون والخصوصية والبيانات</button><button class="pr" id="bc" style="margin-top:8px">📢 مركز واتساب — إرسال عبر API</button><button class="pr" id="imx" style="margin-top:8px">📥 استيراد من Excel / VCF / CSV</button><div class="sec"></div>`:`<div class="tt">مسجّل الدخول: ${esc(ME.name||'')}</div>`}
+${ADMIN?`<button class="pr" id="ac" style="margin-top:0">👥 المستخدمون والخصوصية والبيانات</button><button class="pr" id="bc" style="margin-top:8px">📢 مركز واتساب — إرسال عبر API</button><button class="pr" id="sc" style="margin-top:8px">💬 مركز الرسائل النصية SMS</button><button class="pr" id="imx" style="margin-top:8px">📥 استيراد من Excel / VCF / CSV</button><div class="sec"></div>`:`<div class="tt">مسجّل الدخول: ${esc(ME.name||'')}</div>`}
 <label>الثيم</label><div class="themes">${THEMES.map(([id,n,g])=>`<button class="th${S.tm==id?' on':''}" data-k="tm" data-v="${id}" style="--g:${g}"><i></i>${n}</button>`).join('')}</div>
 <label>لون التمييز</label><div class="sw2"><button data-k="ac" data-v="-1" class="${S.ac<0?'on':''}" style="background:var(--pg)" title="حسب الثيم"></button>${ACC.map((a,i)=>`<button data-k="ac" data-v="${i}" class="${S.ac==i?'on':''}" style="background:${a}"></button>`).join('')}</div>
 <label>حجم الخط</label>${seg('fs',[[0.9,'صغير'],[1,'متوسط'],[1.12,'كبير']])}
@@ -216,7 +216,7 @@ ${ADMIN?`<button class="pr" id="ac" style="margin-top:0">👥 المستخدمو
 <button class="pr dg" id="lo">تسجيل الخروج</button>`);
  $('sh').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const v=b.dataset.v;S[b.dataset.k]=isNaN(+v)||v===''?v:+v;saveS();theme();settings();render();bump()});
  $('sm').oninput=e=>{S.msg=e.target.value;saveS();render()};$('lo').onclick=()=>logout();
- if(ADMIN){$('ac').onclick=access;$('bc').onclick=()=>waHub('send');$('imx').onclick=importer}}
+ if(ADMIN){$('ac').onclick=access;$('bc').onclick=()=>waHub('send','wa');$('sc').onclick=()=>waHub('send','sms');$('imx').onclick=importer}}
 async function access(){const r=await api('GET','users');const us=r.j.users||[];MAXU=r.j.max||MAXU;
  openSh(`<h3>المستخدمون والخصوصية${X}</h3>
 <label>المستخدمون (${us.length} / ${MAXU})</label>
@@ -395,59 +395,83 @@ const nw=w=>w.replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').rep
 const firstName=n=>{const ws=String(n||'').replace(/[()]/g,' ').split(/\s+/).filter(Boolean);return ws.find(w=>!TL.has(nw(w))&&!/^[0-9٠-٩]+$/.test(w))||ws[0]||''};
 const tvars=c=>{const f=firstName(c.n),p=parentOf(c.c||'');return{'الاسم':c.n||'','name':c.n||'','الاسم_الأول':f,'الاسم_الاول':f,'first':f,'المنصب':c.t||'','title':c.t||'','القسم':p,'category':p,'الرقم':c.p||'','phone':c.p||''}};
 const trender=(m,c)=>{const v=tvars(c);return String(m).replace(/\{([^{}\s]+)\}/g,(x,k)=>k in v?v[k]:x)};
-let WA=null,WT='send',WPOLL=null,WSIG='',WCF='all',WD={name:'',msg:'',tpl:'',sel:[],all:false,fav:false,d:0};
+let WA=null,WT='send',WPOLL=null,WSIG='',WCF='all',WCH='wa',WCL='all',WD={name:'',msg:'',tpl:'',sel:[],all:false,fav:false,d:0,names:new Set(),ch:'wa',draft:false};
 const insTxt=(el,t)=>{const s=el.selectionStart==null?el.value.length:el.selectionStart,e=el.selectionEnd==null?s:el.selectionEnd;el.value=el.value.slice(0,s)+t+el.value.slice(e);el.focus();const p=s+t.length;try{el.setSelectionRange(p,p)}catch(_){}el.dispatchEvent(new Event('input'))};
 const wready=c=>c.provider=='ultramsg'?!!(c.instance&&c.hasToken):c.provider=='meta'?!!(c.phone_id&&c.hasToken):c.provider=='wpsender'?!!(c.url&&c.hasToken):!!c.url;
+const sready=c=>c.provider=='twilio'||c.provider=='vonage'?!!(c.account&&c.hasToken&&c.sender):!!c.url;
+const chr=ch=>ch=='sms'?sready(WA.sms):wready(WA.cfg);
+const CHL=ch=>ch=='sms'?'💬 SMS':'📱 واتساب';
 const SP={q:['⏳','في الانتظار',''],s:['✔','أُرسلت','ok'],d:['✔✔','وصلت','ok'],r:['✔✔','قُرئت','bl'],f:['✖','فشلت','er']};
-const CST={running:['🟢 قيد الإرسال','run'],paused:['⏸ متوقفة مؤقتًا','wn'],done:['✅ اكتملت','ok'],stopped:['🛑 أُلغيت','er']};
+const CST={draft:['📝 مسودة','wn'],running:['🟢 قيد الإرسال','run'],paused:['⏸ متوقفة مؤقتًا','wn'],done:['✅ اكتملت','ok'],stopped:['🛑 أُلغيت','er']};
 const fdur=s=>{s=Math.max(0,Math.round(s));if(s<60)return s+' ثانية';const m=Math.ceil(s/60);return m<60?m+' دقيقة':Math.floor(m/60)+' ساعة و'+(m%60)+' دقيقة'};
 const fdt=t=>t?new Date(t).toLocaleString('ar-IQ',{dateStyle:'short',timeStyle:'short'}):'';
 const WERR={busy:'توجد حملة قيد الإرسال حاليًا. انتظر اكتمالها أو أوقفها.',nocfg:'أكمل إعدادات الربط أولًا',norcpt:'لا يوجد مستلمون بأرقام صالحة',msg:'اكتب نص الرسالة',none:'لا توجد رسائل لإعادتها',url:'الرابط يجب أن يبدأ بـ http:// أو https://',phone:'رقم غير صالح',fields:'أكمل الاسم والنص',max:'بلغت الحد الأقصى'};
 const wfail=r=>toast(r.status==0?'تعذّر الاتصال بالخادم':(WERR[r.j.err]||'تعذّر التنفيذ'));
-async function waHub(tab){const r=await api('GET','wa');if(r.status!=200)return failMsg(r);WA=r.j;if(tab)WT=tab;const rd=wready(WA.cfg);
- openSh(`<h3><span class="h3s">📢 مركز واتساب <span class="pill ${rd?'ok':'wn'}">${rd?'الربط جاهز':'الربط غير مكتمل'}</span></span>${X}</h3>
-<div class="tabs" id="wt">${[['send','🚀','حملة جديدة'],['camps','📊','الحملات'],['tpl','🧩','القوالب'],['api','🔌','الربط']].map(([k,i,l])=>`<button data-t="${k}" class="${WT==k?'on':''}"><i>${i}</i>${l}</button>`).join('')}</div><div id="wb"></div>`,1);
+async function waHub(tab,ch){const r=await api('GET','wa');if(r.status!=200)return failMsg(r);WA=r.j;if(tab)WT=tab;if(ch){WCH=ch;WD.ch=ch;WCL=ch;WD.d=0}const rd=chr(WCH);
+ openSh(`<h3><span class="h3s">${WCH=='sms'?'💬 مركز الرسائل النصية':'📢 مركز واتساب'} <span class="pill ${rd?'ok':'wn'}">${rd?'الربط جاهز':'الربط غير مكتمل'}</span></span>${X}</h3>
+<div class="tabs" id="wt">${[['send','🚀','إرسال جديد'],['camps','📊','الحملات'],['tpl','🧩','القوالب'],['api','🔌','الربط']].map(([k,i,l])=>`<button data-t="${k}" class="${WT==k?'on':''}"><i>${i}</i>${l}</button>`).join('')}</div><div id="wb"></div>`,1);
  $('wt').querySelectorAll('button').forEach(b=>b.onclick=()=>{WT=b.dataset.t;clearInterval(WPOLL);$('wt').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x==b));wTab()});wTab()}
-function wTab(){({send:wSend,camps:wCamps,tpl:()=>wTpl(),api:wApi}[WT])()}
+function wTab(){({send:wSend,camps:wCamps,tpl:()=>wTpl(),api:WCH=='sms'?sApi:wApi}[WT])()}
 const wreload=async()=>{const r=await api('GET','wa');if(r.status==200)WA=r.j;return r};
 // ---------- حملة جديدة
-function wSend(){const b=$('wb'),c=WA.cfg,tp=tops(),ok=x=>x.w&&digs(x.w).length>=8;if(!WD.d)WD.d=c.delay||20;if(!WD.msg&&!WD.tpl)WD.msg=S.msg||'';
+function wSend(){const b=$('wb'),ch=WD.ch,sm=ch=='sms',cfg=sm?WA.sms:WA.cfg,tp=tops(),ok=x=>x.w&&digs(x.w).length>=8,rd=chr(ch),mn=sm?2:5,nm=sm?'SMS':'واتساب';if(!WD.d)WD.d=cfg.delay||(sm?10:20);if(!WD.msg&&!WD.tpl)WD.msg=S.msg||'';
  const cnt=f=>new Set(C.filter(x=>ok(x)&&f(x)).map(x=>digs(x.w))).size;
- b.innerHTML=`${wready(c)?'':'<div class="note er">⚠️ لم تكتمل إعدادات الربط بعد. افتح تبويب <a href="#" id="wga">«الربط»</a> وأدخل بيانات الـ API ثم ارجع هنا.</div>'}
+ b.innerHTML=`<label>قناة الإرسال</label><div class="seg" id="wch">${[['wa','📱 واتساب'],['sms','💬 رسالة نصية SMS']].map(([k,l])=>`<button data-ch="${k}" class="${ch==k?'on':''}">${l}</button>`).join('')}</div>
+${rd?'':`<div class="note er">⚠️ لم تكتمل إعدادات ${nm} بعد. افتح تبويب <a href="#" id="wga">«الربط»</a> وأدخل بيانات الـ API ثم ارجع هنا.</div>`}
 <label>اسم الحملة (اختياري)</label><input class="f" id="wn" value="${esc(WD.name)}" placeholder="مثال: دعوة المؤتمر">
-<label>المستلمون</label><div class="chks" style="max-height:230px">
+<label>المستلمون — حسب القسم</label><div class="chks" style="max-height:230px">
 <label class="chk"><input type="checkbox" id="wall" ${WD.all?'checked':''}> <b>كل الأقسام</b></label>
 <label class="chk"><input type="checkbox" id="wfav" ${WD.fav?'checked':''}> ⭐ المفضلة <span class="tt">(${cnt(x=>FAV.has(x.i))})</span></label>
 ${tp.map(k=>`<label class="chk"><input type="checkbox" data-bk="${esc(k)}" ${WD.sel.includes(k)?'checked':''}> ${EM[k]||'📁'} ${esc(k)} <span class="tt">(${cnt(x=>parentOf(x.c)==k)})</span></label>`).join('')}</div>
+<label>أو حدّد أسماء بعينها</label><input class="f" id="wnq" placeholder="ابحث بالاسم أو المنصب أو الرقم لإضافة أشخاص…" autocomplete="off">
+<div class="chks" id="wnl" style="max-height:200px;margin-top:8px"></div>
+<div class="acts" style="margin-top:8px"><button type="button" class="b" id="wna">＋ تحديد كل النتائج</button><button type="button" class="b" id="wnx">✕ مسح الأسماء المحددة</button></div>
+<div class="vars" id="wnc"></div>
 <label>القالب</label><select class="f" id="wtp"><option value="">— رسالة مكتوبة يدويًا —</option>${WA.tpls.map(t=>`<option value="${t.id}" ${WD.tpl==t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select>
 <label>نص الرسالة</label><textarea class="f" id="wm" rows="5" placeholder="السلام عليكم {الاسم}، …">${esc(WD.msg)}</textarea>
 <div class="tt" style="margin-top:8px">اضغط على متغيّر لإدراجه — يُستبدل تلقائيًا بما يخصّ كل شخص:</div>
 <div class="vars">${VARS.map(([k,l])=>`<button type="button" data-v="${k}">＋ ${l}</button>`).join('')}</div>
 <label>معاينة كما ستصل</label><div class="chat"><div class="bub" id="wpv"></div></div>
-<div class="two"><div><label>الانتظار بين الرسائل (ثانية)</label><input class="f" id="wd" type="number" inputmode="numeric" min="5" value="${WD.d}" dir="ltr"></div><div style="display:flex;align-items:flex-end"><button class="b wf" id="wst" style="margin:0;height:49px">💾 حفظ كقالب</button></div></div>
-<div class="sumbox" id="wsum"></div><button class="pr" id="wgo">🚀 ابدأ الإرسال في الخلفية</button>
-<div class="tt" style="margin-top:8px">يعمل الإرسال على الخادم حتى لو أغلقت الصفحة أو الهاتف، وتتابع النتيجة من تبويب «الحملات».</div>`;
- const rec=()=>{const sel=new Set(WD.sel),seen=new Set(),out=[];for(const x of C){if(!ok(x))continue;if(!(WD.all||sel.has(parentOf(x.c))||(WD.fav&&FAV.has(x.i))))continue;const p=digs(x.w);if(seen.has(p))continue;seen.add(p);out.push(x)}return out};
- const upd=()=>{const r=rec(),d=Math.max(5,+$('wd').value||20);WD.d=d;const smp=r[0]||C.find(ok)||{n:'أحمد علي',t:'مدير مكتب',c:''};
-  $('wpv').textContent=trender(WD.msg||'اكتب رسالتك لتظهر المعاينة هنا…',smp);
-  $('wsum').textContent=r.length?`👥 ${r.length} مستلم · ⏱ المدة التقريبية ${fdur(r.length*d)}`:'اختر قسمًا واحدًا على الأقل.'};
- if($('wga'))$('wga').onclick=e=>{e.preventDefault();WT='api';$('wt').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.t=='api'));wTab()};
+${sm?'<div class="tt" id="wcn" style="margin-top:8px"></div>':''}
+<div class="two"><div><label>الانتظار بين الرسائل (ثانية)</label><input class="f" id="wd" type="number" inputmode="numeric" min="${mn}" value="${WD.d}" dir="ltr"></div><div style="display:flex;align-items:flex-end"><button class="b wf" id="wst" style="margin:0;height:49px">💾 حفظ كقالب</button></div></div>
+<label>طريقة التنفيذ</label><div class="seg" id="wmd">${[['now','🚀 إرسال الآن'],['draft','🕒 حفظ كحملة وبدء لاحقًا']].map(([k,l])=>`<button data-m="${k}" class="${(WD.draft?'draft':'now')==k?'on':''}">${l}</button>`).join('')}</div>
+<div class="sumbox" id="wsum"></div><button class="pr" id="wgo"></button>
+<div class="tt" style="margin-top:8px">يعمل الإرسال على الخادم حتى لو أغلقت الصفحة أو الهاتف، وتتابع النتيجة من تبويب «الحملات».${sm?' رسائل SMS لا تُظهر حالة «وصلت/قُرئت»؛ يُحتسب النجاح عند قبول المزوّد للرسالة.':''}</div>`;
+ const rec=()=>{const sel=new Set(WD.sel),seen=new Set(),out=[];for(const x of C){if(!ok(x))continue;if(!(WD.all||sel.has(parentOf(x.c))||(WD.fav&&FAV.has(x.i))||WD.names.has(x.i)))continue;const p=digs(x.w);if(seen.has(p))continue;seen.add(p);out.push(x)}return out};
+ const lbl=()=>{$('wgo').textContent=WD.draft?'🕒 حفظ الحملة (بدون إرسال الآن)':'🚀 ابدأ الإرسال في الخلفية'};
+ const upd=()=>{const r=rec(),d=Math.max(mn,+$('wd').value||cfg.delay||20);WD.d=d;const smp=r[0]||C.find(ok)||{n:'أحمد علي',t:'مدير مكتب',c:''},pv=trender(WD.msg||'اكتب رسالتك لتظهر المعاينة هنا…',smp);
+  $('wpv').textContent=pv;
+  if(sm){const n=WD.msg?pv.length:0,u=/[^\u0000-\u007f]/.test(pv),per=u?(n>70?67:70):(n>160?153:160);$('wcn').textContent=`${n} حرف · ≈ ${Math.max(1,Math.ceil(n/per))} رسالة SMS لكل مستلم${u?' (النص العربي يُحسب 70 حرفًا للرسالة الواحدة)':''}`}
+  $('wsum').textContent=r.length?`👥 ${r.length} مستلم · ⏱ المدة التقريبية ${fdur(r.length*d)}`:'اختر قسمًا أو أسماء على الأقل.';lbl()};
+ // ---- اختيار أسماء بعينها
+ const nq=()=>$('wnq').value.trim().toLowerCase(),nmatch=x=>{const q=nq(),qd=digs(q);return String(x.n||'').toLowerCase().includes(q)||String(x.t||'').toLowerCase().includes(q)||(qd.length>=3&&digs(x.p).includes(qd))};
+ const chips=()=>{const ids=[...WD.names],bx=$('wnc');bx.innerHTML=ids.length?ids.slice(0,40).map(i=>{const x=C.find(y=>y.i==i);return x?`<button type="button" data-rm="${i}">✕ ${esc(x.n)}</button>`:''}).join('')+(ids.length>40?`<span class="tt">+${ids.length-40} آخرون</span>`:''):'';bx.querySelectorAll('[data-rm]').forEach(e=>e.onclick=()=>{WD.names.delete(+e.dataset.rm);chips();drawN();upd()})};
+ const drawN=()=>{const q=nq(),box=$('wnl');if(q.length<2){box.innerHTML='<div class="tt" style="padding:10px 0">اكتب حرفين على الأقل للبحث عن شخص…</div>';return}
+  const m=C.filter(nmatch);box.innerHTML=(m.slice(0,40).map(x=>`<label class="chk"><input type="checkbox" data-nm="${x.i}" ${WD.names.has(x.i)?'checked':''} ${ok(x)?'':'disabled'}><span><b>${esc(x.n)}</b> <span class="tt">${esc(x.t||'')} ${ok(x)?'· <span dir="ltr">'+esc(x.p)+'</span>':'· بلا رقم جوال'}</span></span></label>`).join('')+(m.length>40?`<div class="tt" style="padding:8px 0">عُرض أول 40 من ${m.length} — دقّق البحث أو اضغط «تحديد كل النتائج».</div>`:''))||'<div class="tt" style="padding:10px 0">لا توجد نتائج.</div>';
+  box.querySelectorAll('[data-nm]').forEach(e=>e.onchange=()=>{const id=+e.dataset.nm;if(e.checked)WD.names.add(id);else WD.names.delete(id);chips();upd()})};
+ if($('wga'))$('wga').onclick=e=>{e.preventDefault();waHub('api',ch)};
+ $('wch').querySelectorAll('button').forEach(x=>x.onclick=()=>{if(WD.ch==x.dataset.ch)return;WD.ch=x.dataset.ch;WD.d=0;wSend()});
+ $('wmd').querySelectorAll('button').forEach(x=>x.onclick=()=>{WD.draft=x.dataset.m=='draft';$('wmd').querySelectorAll('button').forEach(y=>y.classList.toggle('on',y==x));lbl()});
  $('wn').oninput=e=>WD.name=e.target.value;
  $('wall').onchange=()=>{WD.all=$('wall').checked;b.querySelectorAll('[data-bk]').forEach(x=>x.checked=WD.all);WD.sel=WD.all?[...tp]:[];upd()};
  $('wfav').onchange=()=>{WD.fav=$('wfav').checked;upd()};
  b.querySelectorAll('[data-bk]').forEach(x=>x.onchange=()=>{WD.sel=[...b.querySelectorAll('[data-bk]')].filter(y=>y.checked).map(y=>y.dataset.bk);WD.all=WD.sel.length==tp.length;$('wall').checked=WD.all;upd()});
+ $('wnq').oninput=drawN;
+ $('wna').onclick=()=>{if(nq().length<2)return toast('اكتب كلمة للبحث أولًا');let n=0;for(const x of C){if(n>=500)break;if(ok(x)&&nmatch(x)){WD.names.add(x.i);n++}}chips();drawN();upd();toast(n?`أُضيف ${n} اسم`:'لا توجد أسماء بأرقام صالحة')};
+ $('wnx').onclick=()=>{WD.names.clear();chips();drawN();upd()};
  $('wtp').onchange=()=>{const t=WA.tpls.find(x=>x.id==$('wtp').value);WD.tpl=t?t.id:'';if(t){WD.msg=t.body;$('wm').value=t.body}upd()};
  $('wm').oninput=e=>{WD.msg=e.target.value;upd()};$('wd').oninput=upd;
  b.querySelectorAll('[data-v]').forEach(x=>x.onclick=()=>insTxt($('wm'),'{'+x.dataset.v+'}'));
  $('wst').onclick=async()=>{const body=$('wm').value.trim();if(!body)return toast('اكتب نص الرسالة أولًا');const n=(prompt('اسم القالب')||'').trim();if(!n)return;const r=await api('POST','tpl',{name:n,body});if(r.status!=200)return wfail(r);await wreload();WD.tpl=r.j.id;wSend();toast('حُفظ القالب')};
- upd();
- $('wgo').onclick=async()=>{const q=rec(),msg=WD.msg.trim(),d=Math.max(5,+$('wd').value||20);if(!wready(c))return toast(WERR.nocfg);if(!q.length)return toast('اختر مستلمين');if(!msg)return toast(WERR.msg);
-  if(!confirm(`سيتم إرسال ${q.length} رسالة عبر الـ API في الخلفية. متابعة؟`))return;
-  const bt=$('wgo');bt.disabled=true;const r=await api('POST','camp',{name:WD.name,msg,ids:q.map(x=>x.i),d,j:c.jit});bt.disabled=false;if(r.status!=200)return wfail(r);
-  WD.msg='';WD.name='';WD.tpl='';waCamp(r.j.id)}}
+ chips();drawN();upd();
+ $('wgo').onclick=async()=>{const q=rec(),msg=WD.msg.trim(),d=Math.max(mn,+$('wd').value||20);if(!rd)return toast(WERR.nocfg);if(!q.length)return toast('اختر مستلمين');if(!msg)return toast(WERR.msg);
+  if(!confirm(WD.draft?`سيتم حفظ حملة ${nm} بـ ${q.length} مستلم كمسودة دون إرسال الآن. متابعة؟`:`سيتم إرسال ${q.length} رسالة ${nm} في الخلفية. متابعة؟`))return;
+  const bt=$('wgo');bt.disabled=true;const r=await api('POST','camp',{name:WD.name,msg,ids:q.map(x=>x.i),d,j:cfg.jit,ch,draft:WD.draft});bt.disabled=false;if(r.status!=200)return wfail(r);
+  WD.msg='';WD.name='';WD.tpl='';WD.names=new Set();WD.draft=false;waCamp(r.j.id)}}
 // ---------- قائمة الحملات
-const cc=x=>{const ok=x.s+x.d+x.r,pc=x.total?Math.round((ok+x.f)/x.total*100):0,[sl,sc]=CST[x.st]||['',''];return`<div class="cm" data-c="${x.id}"><div class="cmh"><b>${esc(x.name)}</b><span class="pill ${sc}">${sl}</span></div><div class="tt">${fdt(x.cr)} · ${x.total} مستلم</div><div class="pbar${x.st=='running'?' on':''}"><i style="width:${pc}%"></i></div><div class="mini"><span class="ok">✔ نجح ${ok}</span><span class="bl">📬 وصل ${x.d+x.r}</span><span class="er">✖ فشل ${x.f}</span><span>⏳ ${x.q}</span></div></div>`};
-function wCamps(){const b=$('wb'),draw=()=>{if(!$('wb'))return;const l=WA.camps;b.innerHTML=l.length?l.map(cc).join(''):'<div class="emp">لا توجد حملات بعد.<br>ابدأ حملتك الأولى من تبويب «حملة جديدة».</div>';b.querySelectorAll('[data-c]').forEach(e=>e.onclick=()=>waCamp(+e.dataset.c))};
+const cc=x=>{const ok=x.s+x.d+x.r,pc=x.total?Math.round((ok+x.f)/x.total*100):0,[sl,sc]=CST[x.st]||['',''];return`<div class="cm" data-c="${x.id}"><div class="cmh"><b>${esc(x.name)}</b><span class="pill ${sc}">${sl}</span></div><div class="tt">${CHL(x.ch)} · ${fdt(x.cr)} · ${x.total} مستلم</div><div class="pbar${x.st=='running'?' on':''}"><i style="width:${pc}%"></i></div><div class="mini"><span class="ok">✔ نجح ${ok}</span><span class="bl">📬 وصل ${x.d+x.r}</span><span class="er">✖ فشل ${x.f}</span><span>⏳ ${x.q}</span></div></div>`};
+function wCamps(){const b=$('wb'),draw=()=>{if(!$('wb'))return;const l=WA.camps.filter(x=>WCL=='all'||x.ch==WCL),fc=`<div class="chips" style="padding:12px 0 4px">${[['all','الكل'],['wa','📱 واتساب'],['sms','💬 SMS']].map(([k,t])=>`<button class="chip${WCL==k?' on':''}" data-cf="${k}">${t}<b>${WA.camps.filter(x=>k=='all'||x.ch==k).length}</b></button>`).join('')}</div>`;
+  b.innerHTML=fc+(l.length?l.map(cc).join(''):'<div class="emp">لا توجد حملات هنا بعد.<br>ابدأ من تبويب «إرسال جديد».</div>');b.querySelectorAll('[data-c]').forEach(e=>e.onclick=()=>waCamp(+e.dataset.c));b.querySelectorAll('[data-cf]').forEach(e=>e.onclick=()=>{WCL=e.dataset.cf;draw()})};
  draw();clearInterval(WPOLL);WPOLL=setInterval(async()=>{if(!$('wb')||WT!='camps')return clearInterval(WPOLL);const r=await wreload();if(r.status==200)draw()},3000)}
 // ---------- تفاصيل حملة (متابعة مباشرة)
 async function waCamp(id){clearInterval(WPOLL);WCF='all';WSIG='';openSh('<div id="wcd"><div class="emp">جارٍ التحميل…</div></div>',1);
@@ -458,11 +482,11 @@ async function waCamp(id){clearInterval(WPOLL);WCF='all';WSIG='';openSh('<div id
   const rl=$('wcr'),sc0=rl?rl.scrollTop:0,sh0=$('sh').scrollTop;
   const flt=x=>WCF=='all'||(WCF=='ok'&&['s','d','r'].includes(x.s))||(WCF=='f'&&x.s=='f')||(WCF=='q'&&x.s=='q'),rows=j.rs.filter(flt);
   box.innerHTML=`<h3><span>${esc(j.name)}</span>${X}</h3>
-<div class="hd"><div class="ring" style="--p:${pc}"><i>${pc}%</i></div><div class="hdi"><span class="pill ${sc}">${sl}</span><div class="tt">بدأت: ${fdt(j.cr)}${j.end?' · انتهت: '+fdt(j.end):''}</div>${run&&j.q?`<div class="tt">⏱ المتبقي تقريبًا: ${fdur(j.q*j.dly)}</div>`:''}${run?'<div class="tt">يعمل على الخادم — يمكنك إغلاق الصفحة.</div>':''}</div></div>
-${j.why?`<div class="note er">${esc(j.why)}</div>`:''}
+<div class="hd"><div class="ring" style="--p:${pc}"><i>${pc}%</i></div><div class="hdi"><span class="pill ${sc}">${sl}</span> <span class="pill">${CHL(j.ch)}</span><div class="tt">بدأت: ${fdt(j.cr)}${j.end?' · انتهت: '+fdt(j.end):''}</div>${run&&j.q?`<div class="tt">⏱ المتبقي تقريبًا: ${fdur(j.q*j.dly)}</div>`:''}${run?'<div class="tt">يعمل على الخادم — يمكنك إغلاق الصفحة.</div>':''}</div></div>
+${j.why?`<div class="note${j.st=='draft'?'':' er'}">${esc(j.why)}</div>`:''}
 <div class="tiles"><div class="tile"><b>${j.total}</b><span>الإجمالي</span></div><div class="tile ok"><b>${ok}</b><span>✔ نجح الإرسال</span></div><div class="tile bl"><b>${j.d+j.r}</b><span>📬 وصلت للمستلم</span></div><div class="tile er"><b>${j.f}</b><span>✖ فشلت</span></div><div class="tile"><b>${j.q}</b><span>⏳ متبقية</span></div></div>
-${ok&&!(j.d+j.r)?'<div class="tt" style="margin-top:8px">ℹ️ «تم الإرسال» = قبل المزوّد الرسالة. أرقام «وصلت» تظهر عند ربط رابط Webhook من تبويب «الربط».</div>':''}
-<div class="acts">${run?'<button class="b" data-a="pause">⏸ إيقاف مؤقت</button>':''}${j.st=='paused'||(j.st=='stopped'&&j.q)?'<button class="b" data-a="resume">▶️ استئناف</button>':''}${run||j.st=='paused'?'<button class="b" data-a="stop">🛑 إلغاء</button>':''}${!run&&j.f?'<button class="b" data-a="retry">🔁 إعادة إرسال الفاشلة</button>':''}<button class="b" data-a="csv">⬇️ تصدير النتائج</button>${!run?'<button class="b" data-a="del" style="color:var(--er)">🗑 حذف</button>':''}</div>
+${ok&&!(j.d+j.r)&&j.ch!='sms'?'<div class="tt" style="margin-top:8px">ℹ️ «تم الإرسال» = قبل المزوّد الرسالة. أرقام «وصلت» تظهر عند ربط رابط Webhook من تبويب «الربط».</div>':''}
+<div class="acts">${run?'<button class="b" data-a="pause">⏸ إيقاف مؤقت</button>':''}${j.st=='paused'||j.st=='draft'||(j.st=='stopped'&&j.q)?`<button class="b" data-a="resume">${j.st=='draft'?'🚀 بدء الإرسال':'▶️ استئناف'}</button>`:''}${run||j.st=='paused'||j.st=='draft'?'<button class="b" data-a="stop">🛑 إلغاء</button>':''}${!run&&j.f?'<button class="b" data-a="retry">🔁 إعادة إرسال الفاشلة</button>':''}<button class="b" data-a="csv">⬇️ تصدير النتائج</button>${!run?'<button class="b" data-a="del" style="color:var(--er)">🗑 حذف</button>':''}</div>
 <details style="margin-top:12px"><summary class="tt" style="cursor:pointer">عرض نص الرسالة</summary><div class="chat" style="margin-top:8px"><div class="bub">${esc(j.msg)}</div></div></details>
 <div class="chips" style="padding:14px 0 8px">${[['all','الكل',j.total],['ok','نجحت',ok],['f','فشلت',j.f],['q','بالانتظار',j.q]].map(([k,l,n])=>`<button class="chip${WCF==k?' on':''}" data-f="${k}">${l}<b>${n}</b></button>`).join('')}</div>
 <div class="rl" id="wcr">${rows.slice(0,400).map(x=>{const [ic,lb,cl]=SP[x.s];return`<div class="rw"><span class="si ${cl}">${ic}</span><div class="rwi"><b>${esc(x.n)}</b><div class="tt" dir="ltr" style="text-align:right">+${esc(x.w)}</div>${x.e?`<div class="er">${esc(x.e)}</div>`:''}</div><span class="pill ${cl}">${lb}</span></div>`}).join('')||'<div class="emp" style="padding:28px">لا توجد عناصر</div>'}${rows.length>400?`<div class="tt" style="padding:10px;text-align:center">عُرض أول 400 من ${rows.length} — صدّر الملف للاطلاع على الكل.</div>`:''}</div>
@@ -518,10 +542,32 @@ function wApi(){const b=$('wb'),c=WA.cfg;let pv=c.provider;
   if(pv=='meta')q.url='';const bt=$('a_sv');bt.disabled=true;const r=await api('PUT','wa/cfg',q);bt.disabled=false;if(r.status!=200)return wfail(r);WA.cfg=r.j.cfg;WD.d=0;toast(wready(WA.cfg)?'تم الحفظ — الربط جاهز ✅':'تم الحفظ، لكن البيانات ناقصة');wApi()};
  $('a_ts').onclick=async()=>{if(!wready(WA.cfg))return $('a_tr').innerHTML='<span class="er-t">احفظ إعدادات الربط أولًا.</span>';const bt=$('a_ts');bt.disabled=true;$('a_tr').textContent='جارٍ الإرسال…';const r=await api('POST','wa/test',{to:$('a_tn').value,msg:$('a_tm').value});bt.disabled=false;
   $('a_tr').innerHTML=r.status!=200?`<span class="er-t">${esc(WERR[r.j.err]||'تعذّر الاتصال بالخادم')}</span>`:r.j.ok?'<span class="ok-t">✅ قبل المزوّد الرسالة — تحقق من وصولها على واتساب.</span>':`<span class="er-t">❌ فشل: ${esc(r.j.e||'خطأ غير معروف')}</span>`}}
+// ---------- ربط الرسائل النصية SMS
+function sApi(){const b=$('wb'),c=WA.sms;let pv=c.provider;
+ const HINT={twilio:'من لوحة <b>Twilio Console</b> انسخ <b>Account SID</b> و<b>Auth Token</b>، وضع في «المرسل» رقم Twilio بصيغة دولية مثل <b dir="ltr">+15551234567</b> (أو اسمًا نصيًا إن كان مسموحًا في بلد المستلم).',vonage:'من لوحة <b>Vonage API</b> انسخ <b>API Key</b> و<b>API Secret</b>، وضع في «المرسل» اسمًا نصيًا أو رقمًا مسجّلًا لديهم. تُرسل الرسائل العربية بترميز Unicode تلقائيًا.',custom:'يُرسل الخادم طلب POST إلى رابطك (بوابة SMS خاصة أو مزوّد محلي). استخدم <b dir="ltr">{{phone}}</b> و<b dir="ltr">{{message}}</b> و<b dir="ltr">{{sender}}</b> و<b dir="ltr">{{token}}</b> داخل الرابط أو الترويسات أو الجسم.'};
+ b.innerHTML=`<div class="note" id="s_h"></div>
+<label>مزوّد الخدمة</label><div class="seg" id="s_pv">${[['twilio','Twilio'],['vonage','Vonage'],['custom','API مخصّص']].map(([k,l])=>`<button data-p="${k}" class="${pv==k?'on':''}">${l}</button>`).join('')}</div>
+<div data-w="custom"><label>رابط الـ API (POST)</label><input class="f" id="s_url" dir="ltr" value="${esc(c.url)}" placeholder="https://sms.example.com/send?to={{phone}}"></div>
+<div data-w="twilio vonage"><label id="s_al">Account SID</label><input class="f" id="s_ac" dir="ltr" value="${esc(c.account)}" autocomplete="off"></div>
+<div data-w="twilio vonage custom"><label id="s_tl">Auth Token ${c.hasToken?'<span class="pill ok">محفوظ</span>':''}</label><input class="f" id="s_tk" type="password" dir="ltr" autocomplete="new-password" placeholder="${c.hasToken?'•••••••• اتركه فارغًا للإبقاء على المحفوظ':'الصق الـ Token هنا'}"></div>
+<div data-w="twilio vonage custom"><label>المرسل (From / Sender)</label><input class="f" id="s_sn" dir="ltr" value="${esc(c.sender)}" placeholder="+15551234567"></div>
+<div data-w="custom"><label>الترويسات (سطر لكل ترويسة)</label><textarea class="f" id="s_hd" rows="2" dir="ltr" placeholder="Authorization: Bearer {{token}}">${esc(c.hdr)}</textarea><label>جسم الطلب (JSON)</label><textarea class="f" id="s_bd" rows="3" dir="ltr" placeholder='{"to":"{{phone}}","from":"{{sender}}","message":"{{message}}"}'>${esc(c.body)}</textarea></div>
+<div class="two"><div><label>الانتظار الافتراضي (ث)</label><input class="f" id="s_dl" type="number" min="2" dir="ltr" value="${c.delay}"></div><div><label>تذبذب عشوائي ٪</label><input class="f" id="s_jt" type="number" min="0" max="80" dir="ltr" value="${c.jit}"></div></div>
+<div class="tt">تأكد أن المزوّد يدعم الإرسال إلى أرقام العراق (+964) وأن المرسل مسجّل ومسموح لديه. الأرقام تُرسل بصيغة دولية.</div>
+<button class="pr" id="s_sv">💾 حفظ إعدادات الربط</button>
+<div class="sec"></div><label>اختبار الإرسال</label>
+<input class="f" id="s_tn" dir="ltr" inputmode="tel" placeholder="رقمك: 07XX XXX XXXX"><input class="f" id="s_tm" style="margin-top:8px" value="رسالة تجريبية من دليل الأرقام ✅">
+<button class="b wf" id="s_ts">📤 إرسال رسالة SMS تجريبية</button><div id="s_tr" class="tt" style="margin-top:8px"></div>`;
+ const show=()=>{$('s_h').innerHTML=HINT[pv];b.querySelectorAll('[data-w]').forEach(e=>e.hidden=!e.dataset.w.split(' ').includes(pv));$('s_al').textContent=pv=='vonage'?'API Key':'Account SID';const tl=$('s_tl'),sv=tl.querySelector('.pill');tl.firstChild.textContent=(pv=='vonage'?'API Secret':pv=='custom'?'Token (اختياري)':'Auth Token')+' ';if(sv)tl.appendChild(sv)};show();
+ $('s_pv').querySelectorAll('button').forEach(x=>x.onclick=()=>{pv=x.dataset.p;$('s_pv').querySelectorAll('button').forEach(y=>y.classList.toggle('on',y==x));show()});
+ $('s_sv').onclick=async()=>{const q={provider:pv,url:pv=='custom'?$('s_url').value.trim():'',account:$('s_ac').value.trim(),sender:$('s_sn').value.trim(),hdr:$('s_hd').value,body:$('s_bd').value,delay:+$('s_dl').value||10,jit:+$('s_jt').value||0};const tk=$('s_tk').value.trim();if(tk)q.token=tk;
+  const bt=$('s_sv');bt.disabled=true;const r=await api('PUT','wa/smscfg',q);bt.disabled=false;if(r.status!=200)return wfail(r);WA.sms=r.j.sms;WD.d=0;toast(sready(WA.sms)?'تم الحفظ — الربط جاهز ✅':'تم الحفظ، لكن البيانات ناقصة');waHub('api')};
+ $('s_ts').onclick=async()=>{if(!sready(WA.sms))return $('s_tr').innerHTML='<span class="er-t">احفظ إعدادات الربط أولًا.</span>';const bt=$('s_ts');bt.disabled=true;$('s_tr').textContent='جارٍ الإرسال…';const r=await api('POST','wa/test',{to:$('s_tn').value,msg:$('s_tm').value,ch:'sms'});bt.disabled=false;
+  $('s_tr').innerHTML=r.status!=200?`<span class="er-t">${esc(WERR[r.j.err]||'تعذّر الاتصال بالخادم')}</span>`:r.j.ok?'<span class="ok-t">✅ قبل المزوّد الرسالة — تحقق من وصولها على الجوال.</span>':`<span class="er-t">❌ فشل: ${esc(r.j.e||'خطأ غير معروف')}</span>`}}
 // ---------- شريط الحملة الجارية في الصفحة الرئيسية
 let WRUN=0;
 async function waRun(){const r=await api('GET','wa/run');if(r.status!=200)return;const x=r.j.run,b=$('bnr');if(!b)return;
- if(!x){b.innerHTML='';if(WRUN){WRUN=0;toast('اكتملت الحملة ✅ — افتح مركز واتساب لرؤية النتيجة')}return}
+ if(!x){b.innerHTML='';if(WRUN){WRUN=0;toast('اكتملت الحملة ✅ — افتح مركز الإرسال لرؤية النتيجة')}return}
  WRUN=x.id;const ok=x.s+x.d+x.r,pc=Math.round((ok+x.f)/x.total*100);
  b.innerHTML=`<div class="bn run"><div><b>📤 «${esc(x.name)}» قيد الإرسال</b> <span class="tt">${ok+x.f} / ${x.total} · ✔ ${ok} · ✖ ${x.f}</span><div class="pbar on"><i style="width:${pc}%"></i></div></div><button id="bnb">متابعة</button></div>`;$('bnb').onclick=()=>waCamp(x.id)}
 

@@ -96,11 +96,17 @@ function wsave(now) {
 function wload() {
   try { W = JSON.parse(fs.readFileSync(WAF, 'utf8')); } catch (e) { W = {}; }
   W.cfg = Object.assign({ provider: 'ultramsg', url: '', instance: '', phone_id: '', token: '', hdr: '', body: '', delay: 20, jit: 30 }, W.cfg || {});
+  W.sms = Object.assign({ provider: 'twilio', url: '', account: '', sender: '', token: '', hdr: '', body: '', delay: 10, jit: 30 }, W.sms || {});
   W.secret = W.secret || crypto.randomBytes(12).toString('hex'); W.tpls = W.tpls || []; W.camps = W.camps || []; W.next = W.next || 1;
   for (const cp of W.camps) for (const r of cp.r) if (r.m) MID.set(r.m, r);
   wsave(true);
 }
 const pubCfg = () => { const { token, ...c } = W.cfg; return { ...c, hasToken: !!token }; };
+const pubSms = () => { const { token, ...c } = W.sms; return { ...c, hasToken: !!token }; };
+// ---- SMS: مزوّدات الرسائل النصية (Twilio / Vonage / API مخصّص)
+const smsReady = c => c.provider === 'twilio' ? !!(c.account && c.token && c.sender) : c.provider === 'vonage' ? !!(c.account && c.token && c.sender) : !!c.url;
+const chReady = ch => ch === 'sms' ? smsReady(W.sms) : waReady(W.cfg);
+const chOf = cp => cp.ch === 'sms' ? 'sms' : 'wa';
 // WP Sender: المسار وأسماء حقول الجسم هنا (عدّلها إن اختلفت عن نموذج cURL في لوحتهم)
 const WPS = { path: '/messages/send', to: 'number', msg: 'message' };
 const waReady = c => c.provider === 'ultramsg' ? !!(c.instance && c.token) : c.provider === 'meta' ? !!(c.phone_id && c.token) : c.provider === 'wpsender' ? !!(c.url && c.token) : !!c.url;
@@ -150,6 +156,38 @@ async function waSend(to, text) {
     return { ok: false, e: str(et(j.error || j.message) || t || 'HTTP ' + r.status, 200), fatal: r.status === 401 || r.status === 403 };
   } catch (e) { return { ok: false, e: e.name === 'TimeoutError' ? 'انتهت مهلة الاتصال' : 'تعذّر الاتصال: ' + str(e.message, 120) }; }
 }
+async function smsSend(to, text) {
+  const c = W.sms, bad = { ok: false, e: 'إعدادات الربط غير مكتملة', fatal: true };
+  try {
+    const sig = AbortSignal.timeout(25000);
+    if (c.provider === 'twilio') {
+      if (!smsReady(c)) return bad;
+      const base = (c.url || 'https://api.twilio.com').replace(/\/+$/, '');
+      const r = await fetch(`${base}/2010-04-01/Accounts/${encodeURIComponent(c.account)}/Messages.json`, { method: 'POST', headers: { Authorization: 'Basic ' + Buffer.from(c.account + ':' + c.token).toString('base64'), 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ To: '+' + to, From: c.sender, Body: text }), signal: sig });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.sid) return { ok: true, id: String(j.sid) };
+      return { ok: false, e: str(et(j.message || j.error) || 'HTTP ' + r.status, 200), fatal: r.status === 401 || r.status === 403 };
+    }
+    if (c.provider === 'vonage') {
+      if (!smsReady(c)) return bad;
+      const base = (c.url || 'https://rest.nexmo.com').replace(/\/+$/, '');
+      const r = await fetch(`${base}/sms/json`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ api_key: c.account, api_secret: c.token, to, from: c.sender, text, type: 'unicode' }), signal: sig });
+      const j = await r.json().catch(() => ({})), m = j.messages && j.messages[0];
+      if (r.ok && m && String(m.status) === '0') return { ok: true, id: String(m['message-id'] || '') };
+      return { ok: false, e: str((m && m['error-text']) || et(j.error) || 'HTTP ' + r.status, 200), fatal: !!m && ['2', '4', '9'].includes(String(m.status)) };
+    }
+    if (!c.url) return { ok: false, e: 'رابط الـ API غير محدد', fatal: true };
+    const sub = (s, mode) => String(s).replace(/\{\{(phone|message|token|sender)\}\}/g, (m, k) => { const v = k === 'phone' ? to : k === 'token' ? c.token : k === 'sender' ? c.sender : text; return mode === 'json' ? JSON.stringify(v).slice(1, -1) : mode === 'url' ? encodeURIComponent(v) : v; });
+    const h = {}; let hasCT = false;
+    for (const ln of String(c.hdr || '').split('\n')) { const i = ln.indexOf(':'); if (i > 0) { const k = ln.slice(0, i).trim(); h[k] = sub(ln.slice(i + 1).trim(), 'raw'); if (/^content-type$/i.test(k)) hasCT = true; } }
+    if (!hasCT) h['Content-Type'] = 'application/json';
+    const r = await fetch(sub(c.url, 'url'), { method: 'POST', headers: h, body: sub(c.body || '{"to":"{{phone}}","message":"{{message}}"}', 'json'), signal: sig });
+    const t = await r.text(); let j = {}; try { j = JSON.parse(t); } catch (e) {}
+    if (r.ok && !(j && (j.success === false || j.status === 'error' || j.error))) return { ok: true, id: String(j.id || j.message_id || j.sid || '') };
+    return { ok: false, e: str(et(j.error || j.message) || t || 'HTTP ' + r.status, 200), fatal: r.status === 401 || r.status === 403 };
+  } catch (e) { return { ok: false, e: e.name === 'TimeoutError' ? 'انتهت مهلة الاتصال' : 'تعذّر الاتصال: ' + str(e.message, 120) }; }
+}
+const chSend = (ch, to, text) => ch === 'sms' ? smsSend(to, text) : waSend(to, text);
 // ---- العامل الخلفي: يعالج الحملة الجارية رسالة تلو رسالة حتى تنتهي (يستمر حتى بعد إغلاق المتصفح، ويُستأنف بعد إعادة تشغيل الخادم)
 async function pump() {
   if (pumping) return; pumping = true; let fails = 0;
@@ -158,7 +196,7 @@ async function pump() {
       const cp = W.camps.find(x => x.st === 'running'); if (!cp) break;
       const r = cp.r.find(x => x.s === 'q');
       if (!r) { cp.st = 'done'; cp.end = Date.now(); wsave(true); continue; }
-      const res = await waSend(r.w, wrender(cp.msg, r));
+      const res = await chSend(chOf(cp), r.w, wrender(cp.msg, r));
       if (res.ok) { r.s = 's'; r.m = res.id; r.a = Date.now(); r.e = ''; fails = 0; if (res.id) MID.set(res.id, r); }
       else if (res.fatal) { if (cp.st === 'running') { cp.st = 'paused'; cp.why = 'توقفت الحملة: ' + res.e + ' — صحّح إعدادات الربط ثم اضغط استئناف.'; } }
       else { r.s = 'f'; r.e = res.e; r.a = Date.now(); if (++fails >= 5 && cp.st === 'running') { cp.st = 'paused'; cp.why = 'توقفت تلقائيًا بعد 5 إخفاقات متتالية (آخر خطأ: ' + res.e + ')'; fails = 0; } }
@@ -183,7 +221,7 @@ function whook(b) {
     if (b.data && b.data.ack) ack(b.data.id, b.data.to, b.data.ack);
   } catch (e) {}
 }
-const wsum = cp => { const o = { id: cp.id, name: cp.name, st: cp.st, why: cp.why || '', cr: cp.cr, end: cp.end || 0, total: cp.r.length, q: 0, s: 0, d: 0, r: 0, f: 0 }; for (const x of cp.r) o[x.s]++; return o; };
+const wsum = cp => { const o = { id: cp.id, ch: chOf(cp), name: cp.name, st: cp.st, why: cp.why || '', cr: cp.cr, end: cp.end || 0, total: cp.r.length, q: 0, s: 0, d: 0, r: 0, f: 0 }; for (const x of cp.r) o[x.s]++; return o; };
 const clampN = (v, a, b, def) => Math.min(b, Math.max(a, +v || def));
 wload(); pump();
 // ---- server
@@ -288,7 +326,7 @@ http.createServer(async (req, res) => {
     }
     if (A === 'wa') {
       const sub = parts[1];
-      if (!sub && M === 'GET') return send(req, res, 200, { cfg: pubCfg(), tpls: W.tpls, camps: W.camps.slice().reverse().map(wsum), secret: W.secret });
+      if (!sub && M === 'GET') return send(req, res, 200, { cfg: pubCfg(), sms: pubSms(), tpls: W.tpls, camps: W.camps.slice().reverse().map(wsum), secret: W.secret });
       if (sub === 'run' && M === 'GET') { const cp = W.camps.find(x => x.st === 'running'); return send(req, res, 200, { run: cp ? wsum(cp) : null }); }
       if (sub === 'cfg' && M === 'PUT') {
         const q = await readBody(req, 10000); if (!q) return send(req, res, 400, {}); const c = W.cfg;
@@ -299,10 +337,20 @@ http.createServer(async (req, res) => {
         if (q.delay !== undefined) c.delay = clampN(q.delay, 5, 3600, 20); if (q.jit !== undefined) c.jit = clampN(q.jit, 0, 80, 0);
         wsave(true); return send(req, res, 200, { ok: true, cfg: pubCfg() });
       }
+      if (sub === 'smscfg' && M === 'PUT') {
+        const q = await readBody(req, 10000); if (!q) return send(req, res, 400, {}); const c = W.sms;
+        if (['twilio', 'vonage', 'custom'].includes(q.provider)) c.provider = q.provider;
+        for (const k of ['url', 'account', 'sender', 'hdr', 'body']) if (q[k] !== undefined) c[k] = str(q[k], k === 'hdr' || k === 'body' ? 2000 : 300);
+        if (c.url && !/^https?:\/\//i.test(c.url)) return send(req, res, 400, { err: 'url' });
+        if (q.token) c.token = str(q.token, 800); if (q.clearToken) c.token = '';
+        if (q.delay !== undefined) c.delay = clampN(q.delay, 2, 3600, 10); if (q.jit !== undefined) c.jit = clampN(q.jit, 0, 80, 0);
+        wsave(true); return send(req, res, 200, { ok: true, sms: pubSms() });
+      }
       if (sub === 'test' && M === 'POST') {
         const q = await readBody(req, 6000), f = q && fmt(q.to); if (!f || !f.w) return send(req, res, 400, { err: 'phone' });
-        if (!waReady(W.cfg)) return send(req, res, 400, { err: 'nocfg' });
-        const r = await waSend(f.w.replace(/\D/g, ''), str(q.msg, 4000) || 'رسالة تجريبية من دليل الأرقام ✅'); return send(req, res, 200, { ok: r.ok, e: r.e || '' });
+        const ch = q.ch === 'sms' ? 'sms' : 'wa';
+        if (!chReady(ch)) return send(req, res, 400, { err: 'nocfg' });
+        const r = await chSend(ch, f.w.replace(/\D/g, ''), str(q.msg, 4000) || 'رسالة تجريبية من دليل الأرقام ✅'); return send(req, res, 200, { ok: r.ok, e: r.e || '' });
       }
     }
     if (A === 'tpl') {
@@ -315,12 +363,13 @@ http.createServer(async (req, res) => {
       const busy = () => W.camps.some(x => x.st === 'running');
       if (M === 'POST' && !parts[1]) {
         const q = await readBody(req, 400000); if (!q) return send(req, res, 400, {}); const msg = str(q.msg, 4096);
-        if (!msg) return send(req, res, 400, { err: 'msg' }); if (!waReady(W.cfg)) return send(req, res, 400, { err: 'nocfg' }); if (busy()) return send(req, res, 409, { err: 'busy' });
+        const ch = q.ch === 'sms' ? 'sms' : 'wa', draft = !!q.draft, dc = ch === 'sms' ? W.sms : W.cfg;
+        if (!msg) return send(req, res, 400, { err: 'msg' }); if (!chReady(ch)) return send(req, res, 400, { err: 'nocfg' }); if (!draft && busy()) return send(req, res, 409, { err: 'busy' });
         const want = new Set((Array.isArray(q.ids) ? q.ids : []).slice(0, 5000).map(Number)), seen = new Set(), rs = [];
         for (const c of DB.contacts) { if (!want.has(c.i)) continue; const w = String(c.w || '').replace(/\D/g, ''); if (w.length < 8 || seen.has(w)) continue; seen.add(w); rs.push({ n: c.n, t: c.t, c: c.c, p: c.p, w, s: 'q' }); }
         if (!rs.length) return send(req, res, 400, { err: 'norcpt' });
-        const cp = { id: W.next++, name: str(q.name, 80) || 'حملة ' + new Date().toISOString().slice(0, 10), msg, d: clampN(q.d, 5, 3600, W.cfg.delay), j: clampN(q.j, 0, 80, W.cfg.jit), st: 'running', cr: Date.now(), end: 0, why: '', r: rs };
-        W.camps.push(cp); wsave(true); pump(); return send(req, res, 200, { ok: true, id: cp.id });
+        const cp = { id: W.next++, ch, name: str(q.name, 80) || (ch === 'sms' ? 'حملة SMS ' : 'حملة ') + new Date().toISOString().slice(0, 10), msg, d: clampN(q.d, ch === 'sms' ? 2 : 5, 3600, dc.delay), j: clampN(q.j, 0, 80, dc.jit), st: draft ? 'draft' : 'running', cr: Date.now(), end: 0, why: draft ? 'محفوظة كمسودة — اضغط «بدء الإرسال» عندما تكون جاهزًا.' : '', r: rs };
+        W.camps.push(cp); wsave(true); if (!draft) pump(); return send(req, res, 200, { ok: true, id: cp.id });
       }
       const cp = W.camps.find(x => x.id === +parts[1]); if (!cp) return send(req, res, 404, {});
       if (M === 'GET') return send(req, res, 200, { ...wsum(cp), msg: cp.msg, dly: cp.d, rs: cp.r.map(x => ({ n: x.n, w: x.w, s: x.s, e: x.e || '', a: x.a || 0 })) });
@@ -328,12 +377,12 @@ http.createServer(async (req, res) => {
       if (M === 'POST') {
         const a2 = parts[2];
         if (a2 === 'pause' && cp.st === 'running') { cp.st = 'paused'; cp.why = ''; }
-        else if (a2 === 'stop' && (cp.st === 'running' || cp.st === 'paused')) { cp.st = 'stopped'; cp.why = ''; cp.end = Date.now(); }
-        else if (a2 === 'resume' && (cp.st === 'paused' || cp.st === 'stopped')) {
-          if (busy()) return send(req, res, 409, { err: 'busy' }); if (!waReady(W.cfg)) return send(req, res, 400, { err: 'nocfg' });
+        else if (a2 === 'stop' && (cp.st === 'running' || cp.st === 'paused' || cp.st === 'draft')) { cp.st = 'stopped'; cp.why = ''; cp.end = Date.now(); }
+        else if (a2 === 'resume' && (cp.st === 'paused' || cp.st === 'stopped' || cp.st === 'draft')) {
+          if (busy()) return send(req, res, 409, { err: 'busy' }); if (!chReady(chOf(cp))) return send(req, res, 400, { err: 'nocfg' });
           if (!cp.r.some(x => x.s === 'q')) return send(req, res, 400, { err: 'none' }); cp.st = 'running'; cp.why = ''; cp.end = 0; pump();
         } else if (a2 === 'retry') {
-          if (cp.st === 'running') return send(req, res, 409, { err: 'busy' }); if (busy()) return send(req, res, 409, { err: 'busy' }); if (!waReady(W.cfg)) return send(req, res, 400, { err: 'nocfg' });
+          if (cp.st === 'running') return send(req, res, 409, { err: 'busy' }); if (busy()) return send(req, res, 409, { err: 'busy' }); if (!chReady(chOf(cp))) return send(req, res, 400, { err: 'nocfg' });
           let n = 0; for (const x of cp.r) if (x.s === 'f') { x.s = 'q'; x.e = ''; n++; } if (!n) return send(req, res, 400, { err: 'none' });
           cp.st = 'running'; cp.why = ''; cp.end = 0; pump();
         } else return send(req, res, 400, { err: 'state' });
