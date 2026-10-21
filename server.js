@@ -96,7 +96,7 @@ function wsave(now) {
 function wload() {
   try { W = JSON.parse(fs.readFileSync(WAF, 'utf8')); } catch (e) { W = {}; }
   W.cfg = Object.assign({ provider: 'ultramsg', url: '', instance: '', phone_id: '', token: '', hdr: '', body: '', delay: 20, jit: 30 }, W.cfg || {});
-  W.sms = Object.assign({ provider: 'twilio', url: '', account: '', sender: '', token: '', hdr: '', body: '', delay: 10, jit: 30 }, W.sms || {});
+  W.sms = Object.assign({ provider: 'smsgate', url: '', account: '', sender: '', token: '', hdr: '', body: '', delay: 10, jit: 30 }, W.sms || {});
   W.secret = W.secret || crypto.randomBytes(12).toString('hex'); W.tpls = W.tpls || []; W.camps = W.camps || []; W.next = W.next || 1;
   for (const cp of W.camps) for (const r of cp.r) if (r.m) MID.set(r.m, r);
   wsave(true);
@@ -104,7 +104,7 @@ function wload() {
 const pubCfg = () => { const { token, ...c } = W.cfg; return { ...c, hasToken: !!token }; };
 const pubSms = () => { const { token, ...c } = W.sms; return { ...c, hasToken: !!token }; };
 // ---- SMS: مزوّدات الرسائل النصية (Twilio / Vonage / API مخصّص)
-const smsReady = c => c.provider === 'twilio' ? !!(c.account && c.token && c.sender) : c.provider === 'vonage' ? !!(c.account && c.token && c.sender) : !!c.url;
+const smsReady = c => c.provider === 'smsgate' ? !!(c.account && c.token) : c.provider === 'twilio' ? !!(c.account && c.token && c.sender) : c.provider === 'vonage' ? !!(c.account && c.token && c.sender) : !!c.url;
 const chReady = ch => ch === 'sms' ? smsReady(W.sms) : waReady(W.cfg);
 const chOf = cp => cp.ch === 'sms' ? 'sms' : 'wa';
 // WP Sender: المسار وأسماء حقول الجسم هنا (عدّلها إن اختلفت عن نموذج cURL في لوحتهم)
@@ -166,6 +166,14 @@ async function smsSend(to, text) {
       const r = await fetch(`${base}/2010-04-01/Accounts/${encodeURIComponent(c.account)}/Messages.json`, { method: 'POST', headers: { Authorization: 'Basic ' + Buffer.from(c.account + ':' + c.token).toString('base64'), 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ To: '+' + to, From: c.sender, Body: text }), signal: sig });
       const j = await r.json().catch(() => ({}));
       if (r.ok && j.sid) return { ok: true, id: String(j.sid) };
+      return { ok: false, e: str(et(j.message || j.error) || 'HTTP ' + r.status, 200), fatal: r.status === 401 || r.status === 403 };
+    }
+    if (c.provider === 'smsgate') {
+      if (!smsReady(c)) return bad;
+      const base = (c.url || 'https://api.sms-gate.app').replace(/\/+$/, '');
+      const r = await fetch(`${base}/3rdparty/v1/messages`, { method: 'POST', headers: { Authorization: 'Basic ' + Buffer.from(c.account + ':' + c.token).toString('base64'), 'Content-Type': 'application/json' }, body: JSON.stringify({ phoneNumbers: ['+' + to], textMessage: { text } }), signal: sig });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.id) return { ok: true, id: String(j.id) };
       return { ok: false, e: str(et(j.message || j.error) || 'HTTP ' + r.status, 200), fatal: r.status === 401 || r.status === 403 };
     }
     if (c.provider === 'vonage') {
@@ -339,7 +347,7 @@ http.createServer(async (req, res) => {
       }
       if (sub === 'smscfg' && M === 'PUT') {
         const q = await readBody(req, 10000); if (!q) return send(req, res, 400, {}); const c = W.sms;
-        if (['twilio', 'vonage', 'custom'].includes(q.provider)) c.provider = q.provider;
+        if (['smsgate', 'twilio', 'vonage', 'custom'].includes(q.provider)) c.provider = q.provider;
         for (const k of ['url', 'account', 'sender', 'hdr', 'body']) if (q[k] !== undefined) c[k] = str(q[k], k === 'hdr' || k === 'body' ? 2000 : 300);
         if (c.url && !/^https?:\/\//i.test(c.url)) return send(req, res, 400, { err: 'url' });
         if (q.token) c.token = str(q.token, 800); if (q.clearToken) c.token = '';
