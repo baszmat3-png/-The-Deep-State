@@ -101,7 +101,9 @@ function wload() {
   wsave(true);
 }
 const pubCfg = () => { const { token, ...c } = W.cfg; return { ...c, hasToken: !!token }; };
-const waReady = c => c.provider === 'ultramsg' ? !!(c.instance && c.token) : c.provider === 'meta' ? !!(c.phone_id && c.token) : !!c.url;
+// WP Sender: المسار وأسماء حقول الجسم هنا (عدّلها إن اختلفت عن نموذج cURL في لوحتهم)
+const WPS = { path: '/messages/send', to: 'phone', msg: 'message' };
+const waReady = c => c.provider === 'ultramsg' ? !!(c.instance && c.token) : c.provider === 'meta' ? !!(c.phone_id && c.token) : c.provider === 'wpsender' ? !!(c.url && c.token) : !!c.url;
 const TL = new Set(['فريق','لواء','عميد','عقيد','مقدم','رائد','نقيب','ملازم','قائد','ركن','مفوض','دكتور','د','م','استاذ','شيخ','سيد','نائب','وزير','محافظ','سفير','حاج','مهندس','معالي','سعادة','قاضي','سماحه','فق','ف','ل']);
 const nw = w => w.replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/^ال(?=.{2})/, '');
 const firstName = n => { const ws = String(n || '').replace(/[()]/g, ' ').split(/\s+/).filter(Boolean); return ws.find(w => !TL.has(nw(w)) && !/^[0-9٠-٩]+$/.test(w)) || ws[0] || ''; };
@@ -129,6 +131,13 @@ async function waSend(to, text) {
       const j = await r.json().catch(() => ({}));
       if (r.ok && j.messages && j.messages[0]) return { ok: true, id: String(j.messages[0].id) };
       return { ok: false, e: str(et(j.error && j.error.message) || 'HTTP ' + r.status, 200), fatal: r.status === 401 || !!(j.error && j.error.code === 190) };
+    }
+    if (c.provider === 'wpsender') {
+      if (!c.url || !c.token) return { ok: false, e: 'إعدادات الربط غير مكتملة', fatal: true };
+      const r = await fetch(c.url.replace(/\/+$/, '') + WPS.path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': c.token }, body: JSON.stringify({ [WPS.to]: to, [WPS.msg]: text }), signal: sig });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && !(j && (j.success === false || j.status === 'error' || j.error))) return { ok: true, id: String(j.id || j.message_id || (j.data && j.data.id) || '') };
+      return { ok: false, e: str(et(j.error || j.message) || 'HTTP ' + r.status, 200), fatal: r.status === 401 || r.status === 403 };
     }
     if (!c.url) return { ok: false, e: 'رابط الـ API غير محدد', fatal: true };
     const sub = (s, mode) => String(s).replace(/\{\{(phone|message|token)\}\}/g, (m, k) => { const v = k === 'phone' ? to : k === 'token' ? c.token : text; return mode === 'json' ? JSON.stringify(v).slice(1, -1) : mode === 'url' ? encodeURIComponent(v) : v; });
@@ -283,7 +292,7 @@ http.createServer(async (req, res) => {
       if (sub === 'run' && M === 'GET') { const cp = W.camps.find(x => x.st === 'running'); return send(req, res, 200, { run: cp ? wsum(cp) : null }); }
       if (sub === 'cfg' && M === 'PUT') {
         const q = await readBody(req, 10000); if (!q) return send(req, res, 400, {}); const c = W.cfg;
-        if (['ultramsg', 'meta', 'custom'].includes(q.provider)) c.provider = q.provider;
+        if (['ultramsg', 'meta', 'custom', 'wpsender'].includes(q.provider)) c.provider = q.provider;
         for (const k of ['url', 'instance', 'phone_id', 'hdr', 'body']) if (q[k] !== undefined) c[k] = str(q[k], k === 'hdr' || k === 'body' ? 2000 : 300);
         if (c.url && !/^https?:\/\//i.test(c.url)) return send(req, res, 400, { err: 'url' });
         if (q.token) c.token = str(q.token, 800); if (q.clearToken) c.token = '';
