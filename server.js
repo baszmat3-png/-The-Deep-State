@@ -102,7 +102,7 @@ function wload() {
 }
 const pubCfg = () => { const { token, ...c } = W.cfg; return { ...c, hasToken: !!token }; };
 // WP Sender: المسار وأسماء حقول الجسم هنا (عدّلها إن اختلفت عن نموذج cURL في لوحتهم)
-const WPS = { path: '/messages/send', to: 'phone', msg: 'message' };
+const WPS = { path: '/messages/send', to: 'number', msg: 'message' };
 const waReady = c => c.provider === 'ultramsg' ? !!(c.instance && c.token) : c.provider === 'meta' ? !!(c.phone_id && c.token) : c.provider === 'wpsender' ? !!(c.url && c.token) : !!c.url;
 const TL = new Set(['فريق','لواء','عميد','عقيد','مقدم','رائد','نقيب','ملازم','قائد','ركن','مفوض','دكتور','د','م','استاذ','شيخ','سيد','نائب','وزير','محافظ','سفير','حاج','مهندس','معالي','سعادة','قاضي','سماحه','فق','ف','ل']);
 const nw = w => w.replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/^ال(?=.{2})/, '');
