@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>دليل الأرقام</title>
+<style>
+:root{--a:#14b8a6;--bg:#f3f5f9;--c:#fff;--t:#0f172a;--m:#64748b;--l:#e2e8f0;--sh:0 4px 20px rgba(15,23,42,.06);--wa:#22c55e}
+[data-th=dark]{--bg:#0b1020;--c:#141b2f;--t:#e8ecf6;--m:#8d99b3;--l:#232c45;--sh:0 4px 24px rgba(0,0,0,.35)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--t);font:15px/1.5 "Segoe UI",Tahoma,"Noto Naskh Arabic",Arial,sans-serif;font-size:calc(15px*var(--fs,1))}
+svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+button,input,select{font:inherit;color:inherit}
+.hero{background:linear-gradient(135deg,var(--a),color-mix(in srgb,var(--a) 45%,#312e81));color:#fff;padding:calc(18px + env(safe-area-inset-top)) 16px 64px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:900px;margin:auto}
+h1{margin:0;font-size:22px}.sub{opacity:.85;font-size:13px;margin-top:2px}
+.hb{display:flex;gap:8px}
+.ib{width:42px;height:42px;border-radius:14px;border:0;background:rgba(255,255,255,.18);color:#fff;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px)}
+.sw{max-width:900px;margin:-44px auto 0;padding:0 14px;position:sticky;top:8px;z-index:9}
+.sb{display:flex;align-items:center;gap:10px;background:var(--c);border-radius:16px;padding:0 14px;box-shadow:var(--sh);border:1px solid var(--l)}
+.sb input{flex:1;border:0;background:none;padding:14px 0;outline:0;font-size:16px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 2px 6px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--l);background:var(--c);border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;white-space:nowrap;box-shadow:var(--sh)}
+.chip b{color:var(--m);margin-inline-start:6px;font-weight:500}.chip.on{background:var(--a);border-color:var(--a);color:#fff}.chip.on b{color:#fff}
+main{max-width:900px;margin:auto;padding:4px 14px 110px}
+.bn{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fef3c7;color:#78350f;border-radius:14px;padding:10px 14px;margin:6px 0;font-size:14px}
+.bn button{background:#f59e0b;border:0;color:#fff;border-radius:10px;padding:7px 14px;font-weight:700;cursor:pointer}
+h2{font-size:14px;margin:22px 4px 10px;display:flex;align-items:center;gap:8px;color:var(--m)}h2 i{flex:1;height:1px;background:var(--l)}
+.g{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr))}
+.card{background:var(--c);border:1px solid var(--l);border-radius:18px;padding:14px;box-shadow:var(--sh)}
+.cp .card{padding:9px 12px}
+.r1{display:flex;gap:12px;align-items:center}
+.av{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:18px;flex:none}
+.nm{font-weight:700;line-height:1.35}.tt{color:var(--m);font-size:13px;margin-top:2px}.tag{display:inline-block;font-size:11px;background:var(--bg);color:var(--m);border-radius:8px;padding:1px 8px;margin:4px 0 0 4px}
+.r2{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.num{direction:ltr;unicode-bidi:embed;text-align:right;white-space:nowrap;font-size:1.12em;font-weight:700;letter-spacing:.4px;font-variant-numeric:tabular-nums;color:var(--a)}
+.ac{display:flex;gap:6px}.ac .b{flex:1;justify-content:center}.ac .b.s{flex:0 0 42px}
+.b{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;border-radius:12px;border:1px solid var(--l);background:var(--bg);text-decoration:none;color:var(--t);cursor:pointer;font-weight:600;font-size:13px}
+.fv{font-size:19px;line-height:1}.fv.on{color:#f59e0b;border-color:#f59e0b}
+.b.wa{background:var(--wa);border-color:var(--wa);color:#fff}.b.s{width:38px;padding:0;justify-content:center}
+.fab{position:fixed;inset-inline-start:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:20px;border:0;background:var(--a);color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.3);display:grid;place-items:center;cursor:pointer;z-index:20}.fab svg{width:26px;height:26px}
+.ov{position:fixed;inset:0;background:rgba(2,6,23,.55);display:none;align-items:flex-end;justify-content:center;z-index:50;backdrop-filter:blur(3px)}.ov.on{display:flex}
+.sh{background:var(--c);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:600px){.ov{align-items:center}.sh{border-radius:24px}}
+.sh h3{margin:0 0 14px;display:flex;justify-content:space-between;align-items:center}
+label{display:block;font-size:13px;color:var(--m);margin:12px 0 5px}
+.f{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--l);background:var(--bg);outline:0;font-size:16px}.f:focus{border-color:var(--a)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{flex:1;min-width:70px;padding:10px;border-radius:12px;border:1px solid var(--l);background:var(--bg);cursor:pointer}.seg button.on{background:var(--a);border-color:var(--a);color:#fff}
+.sw2{display:flex;gap:10px}.sw2 button{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}.sw2 button.on{border-color:var(--t)}
+.pr{background:var(--a);color:#fff;border:0;border-radius:14px;padding:13px;width:100%;font-weight:700;margin-top:14px;cursor:pointer}.pr:disabled{opacity:.6}
+.dg{background:transparent;color:#ef4444;border:1px solid #ef4444}
+.sec{margin:16px 0 0;padding-top:4px;border-top:1px solid var(--l)}
+.ur{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:12px;margin-bottom:8px}
+.chks{max-height:210px;overflow:auto;background:var(--bg);border-radius:12px;padding:4px 12px}
+label.chk{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--t);margin:0;padding:8px 0}
+label.chk input{width:18px;height:18px;accent-color:var(--a)}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:12px;opacity:0;transition:.25s;z-index:99;pointer-events:none;font-size:14px;max-width:90vw;text-align:center}.toast.on{opacity:1}
+.emp{text-align:center;color:var(--m);padding:60px 0}
+#lg{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:linear-gradient(160deg,var(--bg),color-mix(in srgb,var(--a) 22%,var(--bg)))}
+.lc{width:100%;max-width:380px;background:var(--c);border:1px solid var(--l);border-radius:24px;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.18);text-align:center}
+.lc h1{font-size:22px}.lc .lo{font-size:44px}.lc p{color:var(--m);margin:4px 0 8px}.lc label{text-align:right}
+.er{color:#ef4444;font-size:13px;min-height:20px;margin-top:10px}
+</style></head><body>
+<div id="lg" hidden><div class="lc"><div class="lo">🔐</div><h1>دليل الأرقام</h1><p>سجّل الدخول للمتابعة</p>
+<label>اسم المستخدم</label><input class="f" id="lu" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false">
+<label>كلمة المرور</label><input class="f" id="lp" type="password" dir="ltr" autocomplete="off">
+<label>الرمز</label><input class="f" id="lk" type="password" dir="ltr" autocomplete="off">
+<label class="chk" style="justify-content:center;margin-top:12px"><input type="checkbox" id="lr" checked> تذكّرني على هذا الجهاز (365 يومًا)</label><div class="er" id="le"></div><button class="pr" id="go">دخول</button></div></div>
+<div id="app" hidden>
+<div class="hero"><div class="top"><div><h1>دليل الأرقام</h1><div class="sub" id="st"></div></div><div class="hb"><button class="ib" id="gear" aria-label="الإعدادات"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button><button class="ib" id="out" aria-label="خروج"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button></div></div></div>
+<div class="sw"><div class="sb"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input id="q" type="search" placeholder="ابحث بالاسم أو المنصب أو الرقم..." autocomplete="off"></div><div class="chips" id="chips"></div><div class="chips" id="subs" hidden></div></div>
+<main><div id="list"></div></main>
+<button class="fab" id="add" aria-label="إضافة"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+<div class="ov" id="ov"><div class="sh" id="sh"></div></div><div class="toast" id="ts"></div>
+<script>
+const $=id=>document.getElementById(id);
+const rnd=n=>btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(n))));
+const DEV=(()=>{try{let d=localStorage.getItem('pb_dev');if(!d){d=rnd(16);localStorage.setItem('pb_dev',d)}return d}catch(e){return rnd(16)}})();
+const ACC=['#14b8a6','#6366f1','#8b5cf6','#ec4899','#f59e0b','#0ea5e9'];
+const RULES=[["الرئاسات ومجلس الوزراء",["رئيس الوزراء","مجلس الوزراء","رئاسه الجمهوريه","القائد العام","الامانه العامه","ديوان رئاسه","مراسيم"]],["القضاء والمحاماة",["قاض","القضاء","محكمه","محامين","استئناف"]],["مكاتب وسكرتارية",["مكتب","سكرتير","مرافق","مدير اعمال","سايق"]],["وكلاء الوزارات",["وكيل"]],["الوزراء",["وزير","معالي"]],["المحافظون والحكومات المحلية",["محافظ","امين بغداد","مجلس بغداد"]],["مجلس النواب والنواب",["النائب","النواب","النيابي","لجنه التربيه","مقرر مجلس"]],["الإعلاميون والمحللون والفنانون",["اعلام","صحفي","محلل","ناطق","متحدث","الرادود","الفنان","المصور","خبير"]],["الأحزاب والحشد والفصائل",["حزب","التيار","دوله القانون","الدعوه","كتائب","البارتي","كتله","تقدم","الحشد","الهيئه السياسيه"]],["الصحة والمستشفيات",["صحه","طبي","مستشفي","مدينه الطب","صيدل","الطب "]],["السفارات والدبلوماسيون",["سفير","سفارات","سفاره","الامم المتحده"]],["الاستخبارات والأمن الوطني",["استخبار","مخابرات","امن وطني","سيبراني","مكافحه الارهاب","جهاز"]],["الشرطة والداخلية والدفاع المدني",["شرط","داخلي","مرور","نجده","جوازات","جنسيه","اقامه","دفاع مدني","جرائم","اجرام","مكافحه","مركز","قسم","منافذ","حمايه منشا","بطاقه","سيطر","تسفير","قاطع","شخصيات","الكمارك","حفظ القانون","تسجيل جنائي","سجن","الطاقه","اتحاديه","ق ش"]],["الجيش ووزارة الدفاع والعمليات",["دفاع","فرقه","فوج","عمليات","قوات","اركان","طيران","بحري","مدفعيه","عسكري","جيش","بريه","ق ع","المعهد العالي","كليه الاركان"]],["المدراء العامون والدوائر",["مدير عام","مدير دائره","معاون المدير","دائره","معاون مدير"]],["الهيئات والمؤسسات والبنوك",["هيئه","مؤسسه","موسسه","مصرف","وقف","التقاعد","النزاهه","شركه"]],["الشيوخ والعشائر",["شيخ","شبخ","عشائر","امير بني","امير "]]];
+const IC={ph:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',wa:'<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/>',cp:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',ed:'<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>'};
+const ic=k=>`<svg viewBox="0 0 24 24">${IC[k]}</svg>`;
+const EM={'جهات اتصالي الاعتيادية':'📒','المؤتمرات':'🎤','الرئاسات ومجلس الوزراء':'🏛️','القضاء والمحاماة':'⚖️','مكاتب وسكرتارية':'🗂️','وكلاء الوزارات':'🧑‍💼','الوزراء':'🎖️','المحافظون والحكومات المحلية':'🏙️','مجلس النواب والنواب':'🗳️','الإعلاميون والمحللون والفنانون':'🎙️','الأحزاب والحشد والفصائل':'🚩','الصحة والمستشفيات':'🩺','السفارات والدبلوماسيون':'🌐','الاستخبارات والأمن الوطني':'🛡️','الشرطة والداخلية والدفاع المدني':'🚓','الجيش ووزارة الدفاع والعمليات':'🪖','المدراء العامون والدوائر':'🏢','الهيئات والمؤسسات والبنوك':'🏦','الشيوخ والعشائر':'🤝'};
+let S={th:'auto',ac:0,dn:'',fs:1,wm:'app',msg:'',gp:1,so:'o',lock:15},ME,ADMIN=false,C=[],FAV=new Set(),ORD=[],HC=[],MAXU=300,curV=0,act='الكل',sub='',LIMIT=150,REM=false,idleT,es,pollT,syncing=false,dead=false,BOOT=true;
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const toast=m=>{const t=$('ts');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2400)};
+const saveS=()=>{try{localStorage.setItem('pb_s',JSON.stringify(S))}catch(e){}};
+async function api(method,path,body){try{const r=await fetch('/api/'+path,{method,headers:{'Content-Type':'application/json'},credentials:'same-origin',body:body===undefined?undefined:JSON.stringify(body)});let j=null;try{j=await r.json()}catch(e){}if(r.status==401&&path!='login'&&!BOOT)kicked();return{status:r.status,j:j||{}}}catch(e){return{status:0,j:{}}}}
+function kicked(){if(dead)return;dead=true;try{sessionStorage.setItem('pb_msg','انتهت الجلسة: فُكّ ارتباط هذا الجهاز أو سُجّل الدخول من جهاز آخر بنفس المعلومات.')}catch(e){}location.reload()}
+const norm=t=>(t||'').replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[():\-]/g,' ').toLowerCase();
+const RK=['فريق','لواء','عميد','عقيد','مقدم','رائد','ركن','مفوض','نقيب'];
+function auto(t){const n=' '+norm(t)+' ';for(const[c,k]of RULES){if(k.some(x=>n.includes(x)))return c;if(c.startsWith('الجيش')&&/(^| )(فق|ف|ل|لواء|فرقه|فوج)\s*\d|(^| )فق( |$)/.test(n))return c}return n.split(/\s+/).some(w=>RK.includes(w.replace(/^ال/,'')))?'ضباط وقادة (رتبة فقط)':'أخرى'}
+const PS=' › ',parentOf=k=>k.includes(PS)?k.split(PS)[0]:k,childOf=k=>k.includes(PS)?k.split(PS)[1]:'';
+const SC=new WeakMap(),sk=c=>{let s=SC.get(c);if(s==null){s=norm(c.n+' '+c.t+' '+c.c);SC.set(c,s)}return s};
+const cats=()=>{const e=[...new Set(C.map(c=>c.c))];return[...ORD.filter(c=>e.includes(c)),...e.filter(c=>!ORD.includes(c)).sort()]};
+const tops=()=>[...new Set(cats().map(parentOf))],hid=(k,l)=>l.includes(k)||l.includes(parentOf(k));
+function dark(){return S.th=='dark'||(S.th=='auto'&&matchMedia('(prefers-color-scheme:dark)').matches)}
+function theme(){const r=document.documentElement;r.dataset.th=dark()?'dark':'light';r.style.setProperty('--a',ACC[S.ac]);r.style.setProperty('--fs',S.fs);document.body.className=S.dn}
+const bump=()=>{clearTimeout(idleT);if(S.lock&&ME&&!REM)idleT=setTimeout(()=>logout(),S.lock*60000)};
+async function logout(){await Promise.race([api('POST','logout'),new Promise(r=>setTimeout(r,1500))]);dead=true;location.reload()}
+function wl(w){if(!w)return'';const m=(S.msg||'').trim(),p=w.replace(/\D/g,'');return S.wm=='app'?`whatsapp://send?phone=${p}${m?'&text='+encodeURIComponent(m):''}`:`https://wa.me/${p}${m?'?text='+encodeURIComponent(m):''}`}
+const TT=['الفريق','اللواء','العميد','العقيد','المقدم','الرائد','الركن','دكتور','الدكتور','الاستاذ','استاذ','الشيخ','السيد','المهندس','النائب','الحاج','د'];
+const ini=n=>{const w=n.replace(/[()]/g,' ').split(/\s+/).filter(x=>x&&!TT.includes(x));return(w[0]||n||'?')[0]};
+function buildChips(){const k=tops();$('chips').innerHTML=[['الكل',C.length],['★',C.filter(x=>FAV.has(x.i)).length],...k.map(c=>[c,C.filter(x=>parentOf(x.c)==c).length])].map(([c,n])=>`<button class="chip ${c==act?'on':''}" data-c="${esc(c)}">${c=='★'?'⭐ المفضلة':esc(c)}<b>${n}</b></button>`).join('');
+ $('chips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{act=b.dataset.c;sub='';LIMIT=150;buildChips();render();scrollTo({top:0})});
+ const ch=act=='الكل'?[]:cats().filter(x=>parentOf(x)==act&&x.includes(PS));
+ $('subs').hidden=!ch.length;$('subs').innerHTML=ch.length?[['',C.filter(x=>parentOf(x.c)==act).length],...ch.map(x=>[childOf(x),C.filter(y=>y.c==x).length])].map(([c,n])=>`<button class="chip ${c==sub?'on':''}" data-s="${esc(c)}">${c?esc(c):'الكل'}<b>${n}</b></button>`).join(''):'';
+ $('subs').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{sub=b.dataset.s;LIMIT=150;buildChips();render()});
+ $('st').textContent=C.length+' جهة اتصال · '+k.length+' قسم'}
+function card(c,tag){const col=ACC[(cats().indexOf(c.c)+1)%ACC.length],w=wl(c.w),f=FAV.has(c.i);
+ return`<div class="card"><div class="r1"><div class="av" style="background:${col}">${esc(ini(c.n))}</div><div style="min-width:0"><div class="nm">${esc(c.n)}</div>${c.t?`<div class="tt">${esc(c.t)}</div>`:''}${tag?`<span class="tag">${EM[parentOf(c.c)]||'📁'} ${esc(c.c)}</span>`:''}${ADMIN&&c.h?'<span class="tag">🔒 مخفي عن المستخدمين</span>':''}</div></div>
+<div class="r2"><div class="num">${c.p?esc(c.p):'<span style="color:var(--m);font-weight:500;font-size:.8em">— بدون رقم —</span>'}</div><div class="ac">${w?`<a class="b wa" href="${esc(w)}" ${S.wm=='web'?'target="_blank" rel="noopener"':''}>${ic('wa')}واتساب</a>`:''}${c.p?`<a class="b" href="tel:${esc((c.w||c.p).replace(/[^\d+]/g,''))}">${ic('ph')}اتصال</a><button class="b s" data-cp="${c.i}">${ic('cp')}</button>`:''}<button class="b s fv${f?' on':''}" data-fv="${c.i}" aria-label="مفضلة">${f?'★':'☆'}</button>${ADMIN?`<button class="b s" data-ed="${c.i}">${ic('ed')}</button>`:''}</div></div></div>`}
+function render(){const t=norm($('q').value.trim()),tn=t.replace(/\s/g,'');
+ let r=C.filter(c=>(act=='الكل'||(act=='★'?FAV.has(c.i):parentOf(c.c)==act))&&(!sub||childOf(c.c)==sub)&&(!t||sk(c).includes(t)||c.p.replace(/\s/g,'').includes(tn)));
+ if(S.so=='a')r=[...r].sort((a,b)=>a.n.localeCompare(b.n,'ar'));
+ let h='',left=LIMIT;if(!r.length)h=act=='★'&&!t?'<div class="emp">لم تضف أي جهة للمفضلة بعد.<br>اضغط ☆ على أي بطاقة لإضافتها هنا.</div>':'<div class="emp">لا توجد نتائج</div>';
+ else if(S.gp){for(const k of cats()){if(left<=0)break;const g=r.filter(c=>c.c==k);if(!g.length)continue;const s=g.slice(0,left);left-=s.length;h+=`<h2>${EM[parentOf(k)]||'📁'} ${esc(k)}${ADMIN&&hid(k,HC)?' 🔒':''} <span>${g.length}</span><i></i></h2><div class="g">${s.map(c=>card(c)).join('')}</div>`}}
+ else h=`<div class="g">${r.slice(0,LIMIT).map(c=>card(c,1)).join('')}</div>`;
+ if(r.length>LIMIT)h+=`<button class="pr" id="more">عرض المزيد (${r.length-LIMIT})</button>`;
+ $('list').innerHTML=h;if($('more'))$('more').onclick=()=>{LIMIT+=150;render()};
+ $('list').querySelectorAll('[data-cp]').forEach(b=>b.onclick=()=>{const c=C.find(x=>x.i==b.dataset.cp);(navigator.clipboard?navigator.clipboard.writeText(c.p):Promise.reject()).then(()=>toast('تم نسخ الرقم'),()=>toast(c.p))});
+ $('list').querySelectorAll('[data-fv]').forEach(b=>b.onclick=()=>{const id=+b.dataset.fv,on=!FAV.has(id);if(on)FAV.add(id);else FAV.delete(id);api('POST','fav',{id,on});buildChips();if(act=='★')render();else{b.classList.toggle('on',on);b.textContent=on?'★':'☆'}toast(on?'أُضيفت إلى المفضلة':'أُزيلت من المفضلة')});
+ $('list').querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>form(C.find(x=>x.i==b.dataset.ed)))}
+const openSh=h=>{$('sh').innerHTML=h;$('ov').classList.add('on')},closeSh=()=>$('ov').classList.remove('on');
+$('ov').onclick=e=>{if(e.target==$('ov'))closeSh()};
+const X=`<button class="b s" onclick="closeSh()">${ic('x')}</button>`;
+const ERR={name:'اكتب الاسم',phone:'رقم الهاتف غير صحيح',cat:'اختر التصنيف',weak:'كلمة المرور 8 أحرف والرمز 4 خانات على الأقل',exists:'اسم المستخدم مستخدم مسبقًا',max:'بلغت الحد الأقصى للمستخدمين',fields:'تحقق من الاسم واسم المستخدم (إنجليزي/أرقام، 3 أحرف+)'};
+const failMsg=r=>toast(r.status==0?'تعذّر الاتصال بالخادم':(ERR[r.j.err]||'تعذّر الحفظ'));
+function form(c){const e=!!c;c=c||{n:'',t:'',p:'',c:'',h:0};
+ openSh(`<h3>${e?'تعديل جهة اتصال':'إضافة شخص'}${X}</h3>
+<label>الاسم</label><input class="f" id="fn" value="${esc(c.n)}" placeholder="مثال: أحمد علي">
+<label>المنصب أو مكان العمل</label><input class="f" id="ft" value="${esc(c.t)}" placeholder="مثال: مدير مكتب — وزارة الداخلية">
+<label>رقم الهاتف</label><input class="f" id="fp" dir="ltr" inputmode="tel" value="${esc(c.p)}" placeholder="07XX XXX XXXX أو +964...">
+<label>التصنيف</label><select class="f" id="fc"><option value="">تلقائي (حسب المنصب)</option>${cats().map(k=>`<option ${k==c.c?'selected':''}>${esc(k)}</option>`).join('')}<option value="+">＋ تصنيف جديد…</option></select>
+<input class="f" id="fx" placeholder="اسم التصنيف الجديد" style="display:none;margin-top:8px">
+<label class="chk"><input type="checkbox" id="fh" ${c.h?'checked':''}> 🔒 إخفاء هذا الرقم عن جميع المستخدمين</label>
+<button class="pr" id="sv">${e?'حفظ التعديلات':'إضافة'}</button>${e?'<button class="pr dg" id="dl">حذف</button>':''}`);
+ $('fc').onchange=()=>$('fx').style.display=$('fc').value=='+'?'block':'none';
+ $('sv').onclick=async()=>{const n=$('fn').value.trim(),t=$('ft').value.trim();if(!n&&!t)return toast(ERR.name);
+  let k=$('fc').value;if(k=='+')k=$('fx').value.trim();if(!k)k=auto(n+' '+t);
+  const b=$('sv');b.disabled=true;const r=await(e?api('PUT','contact/'+c.i,{n,t,p:$('fp').value,c:k,h:$('fh').checked}):api('POST','contact',{n,t,p:$('fp').value,c:k,h:$('fh').checked}));b.disabled=false;
+  if(r.status!=200)return failMsg(r);closeSh();await sync();toast(e?'تم الحفظ':'تمت الإضافة')};
+ if(e)$('dl').onclick=async()=>{if($('dl').dataset.s){const r=await api('DELETE','contact/'+c.i);if(r.status!=200)return failMsg(r);closeSh();await sync();toast('تم الحذف')}else{$('dl').dataset.s=1;$('dl').textContent='اضغط مرة أخرى للتأكيد'}}}
+const seg=(k,o)=>`<div class="seg">${o.map(([v,l])=>`<button data-k="${k}" data-v="${v}" class="${S[k]==v?'on':''}">${l}</button>`).join('')}</div>`;
+function dl(text,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.append(a);a.click();a.remove()}
+function settings(){openSh(`<h3>الإعدادات${X}</h3>
+${ADMIN?`<button class="pr" id="ac" style="margin-top:0">👥 المستخدمون والخصوصية والبيانات</button><div class="sec"></div>`:`<div class="tt">مسجّل الدخول: ${esc(ME.name||'')}</div>`}
+<label>المظهر</label>${seg('th',[['auto','تلقائي'],['light','فاتح'],['dark','داكن']])}
+<label>لون التطبيق</label><div class="sw2">${ACC.map((a,i)=>`<button data-k="ac" data-v="${i}" class="${S.ac==i?'on':''}" style="background:${a}"></button>`).join('')}</div>
+<label>حجم الخط</label>${seg('fs',[[0.9,'صغير'],[1,'متوسط'],[1.12,'كبير']])}
+<label>كثافة البطاقات</label>${seg('dn',[['','مريح'],['cp','مضغوط']])}
+<label>الترتيب</label>${seg('so',[['o','الأصلي'],['a','أبجدي']])}
+<label>التجميع حسب التصنيف</label>${seg('gp',[[1,'مفعّل'],[0,'معطّل']])}
+<label>القفل التلقائي عند الخمول</label>${REM?'<div class="tt">معطّل لأن الجلسة محفوظة على هذا الجهاز (365 يومًا). سجّل الخروج لإلغائها.</div>':seg('lock',[[0,'مطفأ'],[5,'5 د'],[15,'15 د'],[60,'ساعة']])}
+<label>طريقة فتح واتساب</label>${seg('wm',[['app','مباشر (التطبيق)'],['web','رابط wa.me']])}
+<label>رسالة واتساب الجاهزة (اختياري)</label><input class="f" id="sm" value="${esc(S.msg)}" placeholder="السلام عليكم…">
+<button class="pr dg" id="lo">تسجيل الخروج</button>`);
+ $('sh').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const v=b.dataset.v;S[b.dataset.k]=isNaN(+v)||v===''?v:+v;saveS();theme();settings();render();bump()});
+ $('sm').oninput=e=>{S.msg=e.target.value;saveS();render()};$('lo').onclick=()=>logout();
+ if(ADMIN)$('ac').onclick=access}
+async function access(){const r=await api('GET','users');const us=r.j.users||[];MAXU=r.j.max||MAXU;
+ openSh(`<h3>المستخدمون والخصوصية${X}</h3>
+<label>المستخدمون (${us.length} / ${MAXU})</label>
+${us.length>6?'<input class="f" id="usq" placeholder="ابحث عن مستخدم…" style="margin-bottom:8px">':''}
+<div style="max-height:300px;overflow:auto">${us.map((u,i)=>`<div class="ur" data-n="${esc(u.name+' '+u.u)}"><div><b>${esc(u.name)}</b><div class="tt">@${esc(u.u)} · ${u.hc.length?u.hc.length+' تصنيف مخفي':'بدون تقييد إضافي'} · ${u.bound?'🟢 مرتبط بجهاز':'⚪ غير مرتبط'}</div></div><div style="display:flex;gap:6px">${u.bound?`<button class="b" data-ub="${i}">فك الارتباط</button>`:''}<button class="b" data-u="${i}">تعديل</button></div></div>`).join('')||'<div class="tt">لا يوجد مستخدمون بعد.</div>'}</div>
+<button class="pr" id="nu">＋ إضافة مستخدم</button>
+<div class="sec"></div><label>تصنيفات مخفية عن جميع المستخدمين</label>
+<div class="chks">${tops().map(k=>`<label class="chk"><input type="checkbox" data-hc="${esc(k)}" ${HC.includes(k)?'checked':''}> ${EM[k]||'📁'} ${esc(k)}</label>`).join('')}</div>
+<div class="tt" style="margin-top:6px">لإخفاء رقم محدد: افتح تعديله واختر «إخفاء عن جميع المستخدمين».</div>
+<div class="sec"></div><label>البيانات</label>
+<button class="b" id="im" style="width:100%;justify-content:center">📥 استيراد جهات اتصال (ملف JSON)</button>
+<button class="b" id="bkp" style="width:100%;justify-content:center;margin-top:8px">💾 نسخة احتياطية كاملة</button>
+<button class="b" id="rst" style="width:100%;justify-content:center;margin-top:8px">♻️ استعادة نسخة احتياطية</button>
+<input type="file" id="fi" accept=".json,application/json" hidden>
+<div class="sec"></div><label>حساب المدير</label><button class="b" id="am" style="width:100%;justify-content:center">تغيير اسم المستخدم / كلمة المرور / الرمز</button>
+<button class="b" id="bk" style="width:100%;justify-content:center;margin-top:10px">رجوع</button>`);
+ $('sh').querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>userForm(us[+b.dataset.u]));
+ $('sh').querySelectorAll('[data-ub]').forEach(b=>b.onclick=async()=>{b.disabled=true;await api('POST','unbind',{u:us[+b.dataset.ub].u});toast('تم فك ارتباط الجهاز');access()});
+ if($('usq'))$('usq').oninput=e=>{const q=e.target.value.toLowerCase();$('sh').querySelectorAll('.ur[data-n]').forEach(r=>r.hidden=!!q&&!r.dataset.n.toLowerCase().includes(q))};
+ $('sh').querySelectorAll('[data-hc]').forEach(b=>b.onchange=async()=>{const k=b.dataset.hc;HC=HC.filter(x=>x!=k);if(b.checked)HC.push(k);await api('PUT','hc',{hc:HC});render()});
+ $('nu').onclick=()=>userForm(null);$('am').onclick=adminForm;$('bk').onclick=settings;
+ let mode='';$('im').onclick=()=>{mode='imp';$('fi').click()};$('rst').onclick=()=>{mode='rst';$('fi').click()};
+ $('bkp').onclick=async()=>{const x=await fetch('/api/backup',{credentials:'same-origin'});if(x.ok)dl(await x.text(),'phonebook-backup.json','application/json');else toast('تعذّر التنزيل')};
+ $('fi').onchange=async e=>{const f=e.target.files[0];if(!f)return;let j;try{j=JSON.parse(await f.text())}catch(_){return toast('ملف JSON غير صالح')}
+  if(mode=='imp'){const arr=Array.isArray(j)?j:(j.contacts||[]);if(!arr.length)return toast('لا توجد جهات في الملف');toast('جارٍ الاستيراد…');
+   const r=await api('POST','import',{contacts:arr.map(x=>({n:x.n||x.name||'',t:x.t||x.title||'',p:x.p||x.phone||'',c:x.c||auto((x.n||x.name||'')+' '+(x.t||x.title||'')),h:x.h}))});
+   if(r.status!=200)return failMsg(r);await sync();access();toast(`تمت إضافة ${r.j.added}، مكرر ${r.j.dup}، غير صالح ${r.j.bad}`)}
+  else{if(!confirm('سيُستبدل كل ما على الخادم بالنسخة الاحتياطية. متابعة؟'))return;const r=await api('POST','restore',{db:j});if(r.status!=200)return toast('ملف النسخة غير صالح');await sync(true);access();toast('تمت الاستعادة')}}}
+function userForm(u){const nw=!u;u=u||{name:'',u:'',hc:[]};
+ openSh(`<h3>${nw?'إضافة مستخدم':'تعديل المستخدم'}${X}</h3>
+<label>الاسم الظاهر</label><input class="f" id="un" value="${esc(u.name)}">
+<label>اسم المستخدم (للدخول)</label><input class="f" id="uu" dir="ltr" autocapitalize="off" ${nw?'':'readonly'} value="${esc(u.u)}" placeholder="حروف إنجليزية وأرقام">
+<label>كلمة المرور ${nw?'':'(اتركها فارغة للإبقاء)'}</label><input class="f" id="up" dir="ltr" autocomplete="off" placeholder="8 أحرف على الأقل">
+<label>الرمز ${nw?'':'(اتركه فارغًا للإبقاء)'}</label><input class="f" id="uc" dir="ltr" autocomplete="off" placeholder="4 خانات على الأقل">
+<label>التصنيفات المخفية عن هذا المستخدم</label><div class="chks">${tops().map(k=>`<label class="chk"><input type="checkbox" data-k2="${esc(k)}" ${u.hc.includes(k)?'checked':''}> ${EM[k]||'📁'} ${esc(k)}</label>`).join('')}</div>
+<button class="pr" id="us">حفظ</button>${nw?'':'<button class="pr dg" id="ud">حذف المستخدم</button>'}<button class="b" id="bk" style="width:100%;justify-content:center;margin-top:10px">رجوع</button>`);
+ $('bk').onclick=access;
+ $('us').onclick=async()=>{const name=$('un').value.trim(),un=$('uu').value.trim().toLowerCase(),p=$('up').value,k=$('uc').value;if(!name)return toast(ERR.name);
+  const hc=[...$('sh').querySelectorAll('[data-k2]')].filter(x=>x.checked).map(x=>x.dataset.k2),b=$('us');b.disabled=true;
+  const r=nw?await api('POST','user',{u:un,name,p,k,hc}):await api('PUT','user/'+u.u,{name,hc,...((p||k)?{p,k}:{})});b.disabled=false;
+  if(r.status!=200)return failMsg(r);toast('تم الحفظ — يظهر للمستخدم فورًا');access()};
+ if(!nw)$('ud').onclick=async()=>{if($('ud').dataset.s){await api('DELETE','user/'+u.u);access()}else{$('ud').dataset.s=1;$('ud').textContent='اضغط مرة أخرى للتأكيد'}}}
+function adminForm(){openSh(`<h3>حساب المدير${X}</h3>
+<label>اسم المستخدم</label><input class="f" id="au" dir="ltr" autocapitalize="off" value="${esc(ME.u)}">
+<label>كلمة المرور الجديدة</label><input class="f" id="ap" dir="ltr" autocomplete="off" placeholder="8 أحرف على الأقل">
+<label>الرمز الجديد</label><input class="f" id="ak" dir="ltr" autocomplete="off" placeholder="4 خانات على الأقل">
+<div class="tt" style="margin-top:8px">يسري التغيير فورًا. احفظ البيانات الجديدة جيدًا: لا يمكن استرجاعها.</div>
+<button class="pr" id="as">حفظ</button><button class="b" id="bk" style="width:100%;justify-content:center;margin-top:10px">رجوع</button>`);
+ $('bk').onclick=access;
+ $('as').onclick=async()=>{const r=await api('PUT','account',{u:$('au').value.trim().toLowerCase(),p:$('ap').value,k:$('ak').value});if(r.status!=200)return failMsg(r);ME.u=$('au').value.trim().toLowerCase();toast('تم تغيير بيانات الدخول');access()}}
+// ---- data sync
+function load(d){ME={role:d.role,name:d.name,u:d.u};ADMIN=d.role=='admin';C=d.contacts;ORD=d.ord||[];FAV=new Set(d.fav||[]);HC=d.hc||[];MAXU=d.max||MAXU;REM=!!d.rem;curV=d.v}
+function applyOps(ops){for(const o of ops){const k=C.findIndex(x=>x.i==o.id);if(o.c){if(k>=0)C[k]=o.c;else C.unshift(o.c)}else if(k>=0)C.splice(k,1)}}
+async function sync(full){if(syncing&&!full)return;syncing=true;try{const r=await api('GET','data'+(full?'':'?since='+curV));if(r.status!=200)return;const d=r.j;if(d.same)return;if(d.delta){applyOps(d.ops);curV=d.v}else load(d);buildChips();render()}finally{syncing=false}}
+function connect(){try{if(es)es.close();es=new EventSource('/api/events');es.onmessage=e=>{try{if(JSON.parse(e.data).v>curV)sync()}catch(_){}};es.addEventListener('kick',()=>kicked())}catch(e){}clearInterval(pollT);pollT=setInterval(sync,20000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()})}
+function start(d){load(d);try{Object.assign(S,JSON.parse(localStorage.getItem('pb_s')||'{}'))}catch(e){}
+ $('lg').hidden=true;$('app').hidden=false;$('add').hidden=!ADMIN;theme();buildChips();render();bump();connect();
+ $('gear').onclick=settings;$('out').onclick=()=>logout();$('add').onclick=()=>form();$('q').oninput=()=>{LIMIT=150;render()};
+ ['click','keydown','touchstart','scroll'].forEach(e=>addEventListener(e,bump,{passive:true}))}
+async function doLogin(){const u=$('lu').value.trim(),p=$('lp').value,k=$('lk').value,er=$('le'),b=$('go');er.textContent='';
+ if(!u||!p||!k){er.textContent='أدخل اسم المستخدم وكلمة المرور والرمز';return}
+ b.disabled=true;b.textContent='جارٍ التحقق…';
+ try{const r=await api('POST','login',{u,p,k,dev:DEV,remember:$('lr').checked});
+  if(r.status==200){const d=await api('GET','data');if(d.status==200){$('lp').value='';$('lk').value='';return start(d.j)}er.textContent='تعذّر تحميل البيانات (رمز '+d.status+')'}
+  else if(r.status==409)er.textContent='هنالك جهاز آخر مسجّل دخول بنفس المعلومات. اطلب من المدير فك الارتباط ثم أعد المحاولة.';
+  else if(r.status==429)er.textContent='محاولات كثيرة. انتظر '+(r.j.wait||60)+' ثانية.';
+  else if(r.status==401)er.textContent='بيانات الدخول غير صحيحة';
+  else er.textContent='تعذّر الاتصال بالخادم. حاول لاحقًا.'}
+ finally{b.disabled=false;b.textContent='دخول'}}
+$('go').onclick=doLogin;['lu','lp','lk'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key=='Enter')doLogin()}));
+(async()=>{theme();const d=await api('GET','data');BOOT=false;if(d.status==200)return start(d.j);try{const m=sessionStorage.getItem('pb_msg');if(m){$('le').textContent=m;sessionStorage.removeItem('pb_msg')}}catch(e){}$('lg').hidden=false})();
+
+</script></body></html>
