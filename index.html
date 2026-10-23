@@ -411,7 +411,7 @@ async function waHub(tab,ch){const r=await api('GET','wa');if(r.status!=200)retu
  openSh(`<h3><span class="h3s">${WCH=='sms'?'💬 مركز الرسائل النصية':'📢 مركز واتساب'} <span class="pill ${rd?'ok':'wn'}">${rd?'الربط جاهز':'الربط غير مكتمل'}</span></span>${X}</h3>
 <div class="tabs" id="wt">${[['send','🚀','إرسال جديد'],['camps','📊','الحملات'],['tpl','🧩','القوالب'],['api','🔌','الربط']].map(([k,i,l])=>`<button data-t="${k}" class="${WT==k?'on':''}"><i>${i}</i>${l}</button>`).join('')}</div><div id="wb"></div>`,1);
  $('wt').querySelectorAll('button').forEach(b=>b.onclick=()=>{WT=b.dataset.t;clearInterval(WPOLL);$('wt').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x==b));wTab()});wTab()}
-function wTab(){({send:wSend,camps:wCamps,tpl:()=>wTpl(),api:WCH=='sms'?sApi:wApi}[WT])()}
+function wTab(){({send:wSend,camps:wCamps,tpl:()=>wTpl(),api:WCH=='sms'?sApi:wApi}[WT])();if(WT=='api')wStoreAdd()}
 const wreload=async()=>{const r=await api('GET','wa');if(r.status==200)WA=r.j;return r};
 // ---------- حملة جديدة
 function wSend(){const b=$('wb'),ch=WD.ch,sm=ch=='sms',cfg=sm?WA.sms:WA.cfg,tp=tops(),ok=x=>x.w&&digs(x.w).length>=8,rd=chr(ch),mn=sm?2:5,nm=sm?'SMS':'واتساب';if(!WD.d)WD.d=cfg.delay||(sm?10:20);if(!WD.msg&&!WD.tpl)WD.msg=S.msg||'';
@@ -539,9 +539,17 @@ function wApi(){const b=$('wb'),c=WA.cfg;let pv=c.provider;
  $('a_pv').querySelectorAll('button').forEach(x=>x.onclick=()=>{pv=x.dataset.p;$('a_pv').querySelectorAll('button').forEach(y=>y.classList.toggle('on',y==x));show()});
  $('a_cp').onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText($('a_hk').value):Promise.reject()).then(()=>toast('تم نسخ الرابط'),()=>{$('a_hk').select();toast('حدّد الرابط وانسخه')})};
  $('a_sv').onclick=async()=>{const q={provider:pv,url:$('a_url').value.trim(),instance:$('a_in').value.trim(),phone_id:$('a_ph').value.trim(),hdr:$('a_hd').value,body:$('a_bd').value,delay:+$('a_dl').value||20,jit:+$('a_jt').value||0};const tk=$('a_tk').value.trim();if(tk)q.token=tk;
-  if(pv=='meta')q.url='';const bt=$('a_sv');bt.disabled=true;const r=await api('PUT','wa/cfg',q);bt.disabled=false;if(r.status!=200)return wfail(r);WA.cfg=r.j.cfg;WD.d=0;toast(wready(WA.cfg)?'تم الحفظ — الربط جاهز ✅':'تم الحفظ، لكن البيانات ناقصة');wApi()};
+  if(pv=='meta')q.url='';const bt=$('a_sv');bt.disabled=true;const r=await api('PUT','wa/cfg',q);bt.disabled=false;if(r.status!=200)return wfail(r);WA.cfg=r.j.cfg;WD.d=0;toast(wready(WA.cfg)?'تم الحفظ — الربط جاهز ✅':'تم الحفظ، لكن البيانات ناقصة');wApi();wStoreAdd()};
  $('a_ts').onclick=async()=>{if(!wready(WA.cfg))return $('a_tr').innerHTML='<span class="er-t">احفظ إعدادات الربط أولًا.</span>';const bt=$('a_ts');bt.disabled=true;$('a_tr').textContent='جارٍ الإرسال…';const r=await api('POST','wa/test',{to:$('a_tn').value,msg:$('a_tm').value});bt.disabled=false;
   $('a_tr').innerHTML=r.status!=200?`<span class="er-t">${esc(WERR[r.j.err]||'تعذّر الاتصال بالخادم')}</span>`:r.j.ok?'<span class="ok-t">✅ قبل المزوّد الرسالة — تحقق من وصولها على واتساب.</span>':`<span class="er-t">❌ فشل: ${esc(r.j.e||'خطأ غير معروف')}</span>`}}
+// ---------- حماية الإعدادات: مؤشر ديمومة التخزين + تصدير/استعادة
+function wStoreAdd(){const b=$('wb');if(!b||b.querySelector('#st_box'))return;const s=WA.store||{},d=s.first?new Date(s.first).toLocaleDateString('ar-IQ'):'',ok=s.boots>1;
+ b.insertAdjacentHTML('beforeend',`<div class="sec"></div><label>حفظ الإعدادات وحمايتها</label>
+<div class="note${ok?'':' er'}" id="st_box">${ok?`✅ بقيت الإعدادات محفوظة بعد ${s.boots-1} إعادة تشغيل للخادم منذ ${esc(d)}.`:`⚠️ لم يثبت بعد أن الخادم يحتفظ بالملفات بعد إعادة التشغيل${s.custom?'':' (مسار التخزين الافتراضي غير دائم على Render)'}. على Render تُمحى الملفات عند إعادة التشغيل ما لم يُضف <b>Disk</b> ويُضبط <b dir="ltr">DATA_DIR</b>. صدّر نسخة احتياطية الآن.`}</div>
+<div class="acts"><button class="b" id="st_ex">⬇️ تصدير الإعدادات والقوالب</button><button class="b" id="st_im">⬆️ استعادة من ملف</button></div><input type="file" id="st_f" accept=".json,application/json" style="display:none">`);
+ $('st_ex').onclick=async()=>{const r=await api('GET','wa/export');if(r.status!=200)return wfail(r);dl(JSON.stringify(r.j,null,1),'phonebook-links-backup.json','application/json')};
+ $('st_im').onclick=()=>$('st_f').click();
+ $('st_f').onchange=async e=>{const f=e.target.files[0];if(!f)return;let j;try{j=JSON.parse(await f.text())}catch(_){return toast('الملف غير صالح')}const r=await api('POST','wa/import',j);if(r.status!=200)return wfail(r);toast('تمت الاستعادة ✅');waHub('api')}}
 // ---------- ربط الرسائل النصية SMS
 function sApi(){const b=$('wb'),c=WA.sms;let pv=c.provider;
  const HINT={smsgate:'يحوّل <b>هاتفك وشريحتك</b> إلى بوابة SMS: ثبّت تطبيق <b>SMS Gateway for Android</b> (sms-gate.app) على الهاتف، امنحه صلاحية الرسائل، فعّل وضع <b>Cloud Server</b>، ثم انسخ <b>Username</b> و<b>Password</b> من تبويب Home في التطبيق إلى الحقلين أدناه. يجب أن يبقى الهاتف متصلًا بالإنترنت وفيه رصيد رسائل.',twilio:'من لوحة <b>Twilio Console</b> انسخ <b>Account SID</b> و<b>Auth Token</b>، وضع في «المرسل» رقم Twilio بصيغة دولية مثل <b dir="ltr">+15551234567</b> (أو اسمًا نصيًا إن كان مسموحًا في بلد المستلم).',vonage:'من لوحة <b>Vonage API</b> انسخ <b>API Key</b> و<b>API Secret</b>، وضع في «المرسل» اسمًا نصيًا أو رقمًا مسجّلًا لديهم. تُرسل الرسائل العربية بترميز Unicode تلقائيًا.',custom:'يُرسل الخادم طلب POST إلى رابطك (بوابة SMS خاصة أو مزوّد محلي). استخدم <b dir="ltr">{{phone}}</b> و<b dir="ltr">{{message}}</b> و<b dir="ltr">{{sender}}</b> و<b dir="ltr">{{token}}</b> داخل الرابط أو الترويسات أو الجسم.'};

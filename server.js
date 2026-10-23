@@ -93,6 +93,11 @@ function wsave(now) {
   const w = () => { try { fs.mkdirSync(DATA, { recursive: true }); const tmp = WAF + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(W)); fs.renameSync(tmp, WAF); } catch (e) { console.error('wa save failed', e.message); } };
   clearTimeout(wT); if (now) w(); else wT = setTimeout(w, 1500);
 }
+// ---- مؤشر ديمومة التخزين: يُحسب عدد مرات الإقلاع التي بقي فيها هذا الملف موجودًا
+const BOOTF = path.join(DATA, 'meta.json'); let BOOT = { first: Date.now(), boots: 0 };
+try { BOOT = Object.assign(BOOT, JSON.parse(fs.readFileSync(BOOTF, 'utf8'))); } catch (e) {}
+BOOT.boots++; BOOT.last = Date.now();
+try { fs.mkdirSync(DATA, { recursive: true }); fs.writeFileSync(BOOTF, JSON.stringify(BOOT)); } catch (e) { console.error('meta save failed', e.message); }
 function wload() {
   try { W = JSON.parse(fs.readFileSync(WAF, 'utf8')); } catch (e) { W = {}; }
   W.cfg = Object.assign({ provider: 'ultramsg', url: '', instance: '', phone_id: '', token: '', hdr: '', body: '', delay: 20, jit: 30 }, W.cfg || {});
@@ -334,7 +339,7 @@ http.createServer(async (req, res) => {
     }
     if (A === 'wa') {
       const sub = parts[1];
-      if (!sub && M === 'GET') return send(req, res, 200, { cfg: pubCfg(), sms: pubSms(), tpls: W.tpls, camps: W.camps.slice().reverse().map(wsum), secret: W.secret });
+      if (!sub && M === 'GET') return send(req, res, 200, { cfg: pubCfg(), sms: pubSms(), store: { first: BOOT.first, boots: BOOT.boots, custom: DATA !== DIR }, tpls: W.tpls, camps: W.camps.slice().reverse().map(wsum), secret: W.secret });
       if (sub === 'run' && M === 'GET') { const cp = W.camps.find(x => x.st === 'running'); return send(req, res, 200, { run: cp ? wsum(cp) : null }); }
       if (sub === 'cfg' && M === 'PUT') {
         const q = await readBody(req, 10000); if (!q) return send(req, res, 400, {}); const c = W.cfg;
@@ -344,6 +349,19 @@ http.createServer(async (req, res) => {
         if (q.token) c.token = str(q.token, 800); if (q.clearToken) c.token = '';
         if (q.delay !== undefined) c.delay = clampN(q.delay, 5, 3600, 20); if (q.jit !== undefined) c.jit = clampN(q.jit, 0, 80, 0);
         wsave(true); return send(req, res, 200, { ok: true, cfg: pubCfg() });
+      }
+      if (sub === 'export' && M === 'GET') return send(req, res, 200, { v: 1, secret: W.secret, cfg: W.cfg, sms: W.sms, tpls: W.tpls }, { 'Content-Disposition': 'attachment; filename="phonebook-links-backup.json"' });
+      if (sub === 'import' && M === 'POST') {
+        const q = await readBody(req, 400000); if (!q || typeof q !== 'object') return send(req, res, 400, {});
+        const put = (dst, src, keys) => { if (!src || typeof src !== 'object') return; for (const k of keys) if (typeof src[k] === 'string') dst[k] = str(src[k], k === 'hdr' || k === 'body' ? 2000 : k === 'token' ? 800 : 300); };
+        if (q.cfg && ['ultramsg', 'meta', 'custom', 'wpsender'].includes(q.cfg.provider)) W.cfg.provider = q.cfg.provider;
+        put(W.cfg, q.cfg, ['url', 'instance', 'phone_id', 'token', 'hdr', 'body']);
+        if (q.sms && ['smsgate', 'twilio', 'vonage', 'custom'].includes(q.sms.provider)) W.sms.provider = q.sms.provider;
+        put(W.sms, q.sms, ['url', 'account', 'sender', 'token', 'hdr', 'body']);
+        for (const [d, o, lo, def] of [[W.cfg, q.cfg, 5, 20], [W.sms, q.sms, 2, 10]]) { if (o && o.delay !== undefined) d.delay = clampN(o.delay, lo, 3600, def); if (o && o.jit !== undefined) d.jit = clampN(o.jit, 0, 80, 0); if (d.url && !/^https?:\/\//i.test(d.url)) d.url = ''; }
+        if (typeof q.secret === 'string' && /^[0-9a-f]{24}$/.test(q.secret)) W.secret = q.secret;
+        if (Array.isArray(q.tpls)) for (const t of q.tpls.slice(0, 200)) { const n = str(t && t.name, 80), b = str(t && t.body, 4096); if (!n || !b || W.tpls.length >= 200 || W.tpls.some(x => x.name === n && x.body === b)) continue; W.tpls.push({ id: W.next++, name: n, body: b }); }
+        wsave(true); return send(req, res, 200, { ok: true });
       }
       if (sub === 'smscfg' && M === 'PUT') {
         const q = await readBody(req, 10000); if (!q) return send(req, res, 400, {}); const c = W.sms;
