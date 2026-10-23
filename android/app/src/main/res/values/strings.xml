@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">دليل الأرقام</string>
+    <!-- رابط موقعك على Render: غيّره هنا إن تغيّر الرابط -->
+    <string name="app_url" translatable="false">https://deep-state.onrender.com/</string>
+</resources>

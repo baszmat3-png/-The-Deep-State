@@ -201,7 +201,7 @@ function form(c){const e=!!c;c=c||{n:'',t:'',p:'',c:'',h:0};
   if(r.status!=200)return failMsg(r);closeSh();await sync();toast(e?'تم الحفظ':'تمت الإضافة')};
  if(e)$('dl').onclick=async()=>{if($('dl').dataset.s){const r=await api('DELETE','contact/'+c.i);if(r.status!=200)return failMsg(r);closeSh();await sync();toast('تم الحذف')}else{$('dl').dataset.s=1;$('dl').textContent='اضغط مرة أخرى للتأكيد'}}}
 const seg=(k,o)=>`<div class="seg">${o.map(([v,l])=>`<button data-k="${k}" data-v="${v}" class="${S[k]==v?'on':''}">${l}</button>`).join('')}</div>`;
-function dl(text,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.append(a);a.click();a.remove()}
+function dl(text,name,type){if(window.AndroidApp&&AndroidApp.save){AndroidApp.save(name,type||'',String(text));return}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.append(a);a.click();a.remove()}
 function settings(){openSh(`<h3>الإعدادات${X}</h3>
 ${ADMIN?`<button class="pr" id="ac" style="margin-top:0">👥 المستخدمون والخصوصية والبيانات</button><button class="pr" id="bc" style="margin-top:8px">📢 مركز واتساب — إرسال عبر API</button><button class="pr" id="sc" style="margin-top:8px">💬 مركز الرسائل النصية SMS</button><button class="pr" id="imx" style="margin-top:8px">📥 استيراد من Excel / VCF / CSV</button><div class="sec"></div>`:`<div class="tt">مسجّل الدخول: ${esc(ME.name||'')}</div>`}
 <label>الثيم</label><div class="themes">${THEMES.map(([id,n,g])=>`<button class="th${S.tm==id?' on':''}" data-k="tm" data-v="${id}" style="--g:${g}"><i></i>${n}</button>`).join('')}</div>
