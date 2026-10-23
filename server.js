@@ -260,7 +260,7 @@ http.createServer(async (req, res) => {
       const dev = str(q.dev, 64), ex = sessOf(u);
       if (ex && ex[1].dev !== dev) return send(req, res, 409, { err: 'bound' });
       if (ex) kill(ex[0], false);
-      const sid = crypto.randomBytes(32).toString('hex'), now = Date.now(), rem = !!q.remember;
+      const sid = crypto.randomBytes(32).toString('hex'), now = Date.now(), rem = true; // الدخول يُحفظ دائمًا (365 يومًا)
       DB.sessions[sid] = { u, dev, t: now, exp: now + (rem ? 365 * DAY : 12 * 3600e3) }; save();
       const secure = /https/i.test(req.headers['x-forwarded-proto'] || '') ? '; Secure' : '';
       return send(req, res, 200, { ok: true }, { 'Set-Cookie': `sid=${sid}; HttpOnly; SameSite=Lax; Path=/${rem ? '; Max-Age=31536000' : ''}${secure}` });
