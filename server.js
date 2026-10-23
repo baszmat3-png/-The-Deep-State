@@ -4,12 +4,34 @@ const http = require('http'), fs = require('fs'), path = require('path'), crypto
 const DIR = __dirname, DATA = process.env.DATA_DIR || DIR;
 const DBF = path.join(DATA, 'db.json'), SEED = path.join(DIR, 'seed.json'), HTMLF = path.join(DIR, 'index.html');
 const MAXU = 300, PS = ' › ', DAY = 864e5;
+// ---- تخزين خارجي دائم (Upstash Redis REST): نسخة مرآة من الملفات تُستعاد عند الإقلاع (Render يمسح ملفاته)
+const RURL = (process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/+$/, ''), RTOK = process.env.UPSTASH_REDIS_REST_TOKEN || '', RPFX = process.env.REMOTE_PREFIX || 'pb';
+const REM = { on: !!(RURL && RTOK), ok: true, last: 0, err: '', hash: {}, t: {}, busy: {}, dirty: {} }, RDEB = +process.env.REMOTE_DEBOUNCE_MS || 15000;
+if (REM.on) {
+  try {
+    const out = require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'restore.js')], { env: process.env, timeout: 120000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
+    for (const f of JSON.parse(out.trim().split('\n').pop()).restored) REM.hash[f] = crypto.createHash('sha1').update(fs.readFileSync(path.join(DATA, f))).digest('hex');
+    REM.last = Date.now(); console.log('remote restore ok');
+  } catch (e) { REM.ok = false; REM.err = 'تعذّرت الاستعادة من التخزين الخارجي؛ أُوقفت المزامنة حمايةً للنسخة المحفوظة'; console.error('remote restore failed:', e.message); }
+}
+async function rcmd(a) { const r = await fetch(RURL, { method: 'POST', headers: { Authorization: 'Bearer ' + RTOK, 'Content-Type': 'application/json' }, body: JSON.stringify(a), signal: AbortSignal.timeout(20000) }); const j = await r.json().catch(() => ({})); if (!r.ok || j.error) throw new Error(j.error || 'HTTP ' + r.status); return j.result; }
+async function rpush(f) {
+  if (!REM.on || !REM.ok) return; if (REM.busy[f]) { REM.dirty[f] = 1; return; } REM.busy[f] = 1;
+  try {
+    const txt = fs.readFileSync(path.join(DATA, f)), h = crypto.createHash('sha1').update(txt).digest('hex'); if (REM.hash[f] === h) return;
+    const b64 = zlib.gzipSync(txt).toString('base64'), n = Math.ceil(b64.length / 400000) || 1;
+    for (let i = 0; i < n; i++) await rcmd(['SET', `${RPFX}:${f}:${i}`, b64.slice(i * 400000, (i + 1) * 400000)]);
+    await rcmd(['SET', `${RPFX}:${f}:n`, String(n)]); REM.hash[f] = h; REM.last = Date.now(); REM.err = '';
+  } catch (e) { REM.err = 'فشلت المزامنة: ' + String(e.message).slice(0, 120); console.error('remote push', f, e.message); }
+  finally { REM.busy[f] = 0; if (REM.dirty[f]) { REM.dirty[f] = 0; rsched(f); } }
+}
+function rsched(f, now) { if (!REM.on || !REM.ok) return; if (now) { clearTimeout(REM.t[f]); REM.t[f] = 0; return rpush(f); } if (REM.t[f]) return; REM.t[f] = setTimeout(() => { REM.t[f] = 0; rpush(f); }, RDEB); }
 let DB, LOG = [], LOGMIN = 0;
 const hashPw = (p, k, salt) => crypto.scryptSync(String(p) + '\u0000' + String(k), salt, 32).toString('hex');
 function mkUser(u, name, p, k, role, hc) { const salt = crypto.randomBytes(16).toString('hex'); return { u: u.toLowerCase(), name, role, salt, h: hashPw(p, k, salt), hc: hc || [] }; }
 let saveT = null;
 function save(now) {
-  const w = () => { try { fs.mkdirSync(DATA, { recursive: true }); const tmp = DBF + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(DB)); fs.renameSync(tmp, DBF); } catch (e) { console.error('save failed', e.message); } };
+  const w = () => { try { fs.mkdirSync(DATA, { recursive: true }); const tmp = DBF + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(DB)); fs.renameSync(tmp, DBF); rsched('db.json'); } catch (e) { console.error('save failed', e.message); } };
   clearTimeout(saveT); if (now) w(); else saveT = setTimeout(w, 250);
 }
 function init() {
@@ -90,14 +112,14 @@ const WTT = ['الفريق','اللواء','العميد','العقيد','الم
 let W, wT = null, pumping = false; const MID = new Map();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function wsave(now) {
-  const w = () => { try { fs.mkdirSync(DATA, { recursive: true }); const tmp = WAF + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(W)); fs.renameSync(tmp, WAF); } catch (e) { console.error('wa save failed', e.message); } };
+  const w = () => { try { fs.mkdirSync(DATA, { recursive: true }); const tmp = WAF + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(W)); fs.renameSync(tmp, WAF); rsched('wa.json'); } catch (e) { console.error('wa save failed', e.message); } };
   clearTimeout(wT); if (now) w(); else wT = setTimeout(w, 1500);
 }
 // ---- مؤشر ديمومة التخزين: يُحسب عدد مرات الإقلاع التي بقي فيها هذا الملف موجودًا
 const BOOTF = path.join(DATA, 'meta.json'); let BOOT = { first: Date.now(), boots: 0 };
 try { BOOT = Object.assign(BOOT, JSON.parse(fs.readFileSync(BOOTF, 'utf8'))); } catch (e) {}
 BOOT.boots++; BOOT.last = Date.now();
-try { fs.mkdirSync(DATA, { recursive: true }); fs.writeFileSync(BOOTF, JSON.stringify(BOOT)); } catch (e) { console.error('meta save failed', e.message); }
+try { fs.mkdirSync(DATA, { recursive: true }); fs.writeFileSync(BOOTF, JSON.stringify(BOOT)); rsched('meta.json'); } catch (e) { console.error('meta save failed', e.message); }
 function wload() {
   try { W = JSON.parse(fs.readFileSync(WAF, 'utf8')); } catch (e) { W = {}; }
   W.cfg = Object.assign({ provider: 'ultramsg', url: '', instance: '', phone_id: '', token: '', hdr: '', body: '', delay: 20, jit: 30 }, W.cfg || {});
@@ -339,7 +361,7 @@ http.createServer(async (req, res) => {
     }
     if (A === 'wa') {
       const sub = parts[1];
-      if (!sub && M === 'GET') return send(req, res, 200, { cfg: pubCfg(), sms: pubSms(), store: { first: BOOT.first, boots: BOOT.boots, custom: DATA !== DIR }, tpls: W.tpls, camps: W.camps.slice().reverse().map(wsum), secret: W.secret });
+      if (!sub && M === 'GET') return send(req, res, 200, { cfg: pubCfg(), sms: pubSms(), store: { first: BOOT.first, boots: BOOT.boots, custom: DATA !== DIR, remote: { on: REM.on, ok: REM.ok, last: REM.last, err: REM.err } }, tpls: W.tpls, camps: W.camps.slice().reverse().map(wsum), secret: W.secret });
       if (sub === 'run' && M === 'GET') { const cp = W.camps.find(x => x.st === 'running'); return send(req, res, 200, { run: cp ? wsum(cp) : null }); }
       if (sub === 'cfg' && M === 'PUT') {
         const q = await readBody(req, 10000); if (!q) return send(req, res, 400, {}); const c = W.cfg;
@@ -425,3 +447,7 @@ http.createServer(async (req, res) => {
     return send(req, res, 404, {});
   } catch (e) { console.error(e); try { send(req, res, 500, { err: 'server' }); } catch (_) {} }
 }).listen(process.env.PORT || 3000, () => console.log('listening'));
+// عند الإيقاف (Render يرسل SIGTERM): اكتب كل شيء محليًا ثم ادفعه للتخزين الخارجي قبل الخروج
+let stopping = false;
+const bye = async () => { if (stopping) return; stopping = true; try { save(true); wsave(true); await Promise.race([Promise.all(['db.json', 'wa.json', 'meta.json'].map(f => rpush(f))), sleep(12000)]); } catch (e) {} process.exit(0); };
+process.on('SIGTERM', bye); process.on('SIGINT', bye);
